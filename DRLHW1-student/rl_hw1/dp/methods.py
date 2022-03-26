@@ -188,6 +188,8 @@ class PolicyIteration(DPAgent):
     """
 
     def __init__(self, transitions_map, nact=4):
+
+        # inherit DPAgent class to use policy improvement and evaluation functions
         super().__init__(nact, transitions_map)
 
     def optimize(self, gamma, epsilon=0.05, n_iteration=1):
@@ -203,9 +205,6 @@ class PolicyIteration(DPAgent):
             This should not take more than 10 lines.
         """
 
-        # object to use policy improvement and evaluation functions
-        dp_agent = DPAgent()
-
         for _ in range(n_iteration):
 
             # loop until value function is improves less than epsilon
@@ -213,10 +212,10 @@ class PolicyIteration(DPAgent):
             while delta > epsilon:
             
                 # run policy evaluation algorithm to update value function
-                delta = dp_agent.one_step_policy_eval(gamma=gamma)
+                delta = self.one_step_policy_eval(gamma=gamma)
 
             # run policy improvement algorithm to update policy distribution
-            is_stable = dp_agent.policy_improvement(gamma=gamma)
+            is_stable = self.policy_improvement(gamma=gamma)
 
             # loop until improvements in policy distribution is converged to stability
             if is_stable:
@@ -230,6 +229,8 @@ class ValueIteration(DPAgent):
     """
 
     def __init__(self, transitions_map, nact=4):
+
+        # inherit DPAgent class to use policy improvement and evaluation functions
         super().__init__(nact, transitions_map)
 
     def optimize(self, gamma, n_iteration=1):
@@ -240,12 +241,15 @@ class ValueIteration(DPAgent):
             Arguments:
                 - gamma: Discount factor
                 - n_iteration: Number of iterations
+
             This should not take more than 5 lines.
         """
-        
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+
+        # loop for value function updates
+        for _ in range(n_iteration):
+
+            # run policy evaluation algorithm to update value function
+            delta = self.one_step_policy_eval(gamma=gamma)
+
+        # acting greedy by applying policy improvement algorithm on the updated valur function
+        is_stable = self.policy_improvement(gamma=gamma)
