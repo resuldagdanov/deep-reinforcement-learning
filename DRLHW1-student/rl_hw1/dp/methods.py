@@ -190,7 +190,7 @@ class PolicyIteration(DPAgent):
     def optimize(self, gamma, epsilon=0.05, n_iteration=1):
         """
             This is the main function where you implement PI. Simply use "one_step_policy_eval" and
-            "policy_improvement" methods. Itearte as "n_iteration" times in a loop.
+            "policy_improvement" methods. Iterate as "n_iteration" times in a loop.
             
             Arguments:
                 - gamma: Discount factor
@@ -220,7 +220,7 @@ class ValueIteration(DPAgent):
     def optimize(self, gamma, n_iteration=1):
         """
             This is the main function where you implement VI. Simply use "one_step_policy_eval" and
-            "policy_improvement" methods. Itearte as "n_iteration" times in a loop.
+            "policy_improvement" methods. Iterate as "n_iteration" times in a loop.
             
             Arguments:
                 - gamma: Discount factor
