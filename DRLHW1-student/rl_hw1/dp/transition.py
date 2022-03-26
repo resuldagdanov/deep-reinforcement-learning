@@ -34,7 +34,8 @@ def make_transition_map(initial_board):
 
         state 32: passable
         state 35: non-passable (wall)
-        state 80: terminal
+        state 64: termination state
+        state 80: initial agent position
 
         Arguments:
             - initial_board: Board of the Mazeworld at initialization
@@ -58,7 +59,7 @@ def make_transition_map(initial_board):
     walls = np.argwhere(np.asarray(initial_board) == 35)
 
     # get state coordinate for episode termination
-    terminal_states = np.argwhere(np.asarray(initial_board) == 80)
+    terminal_states = np.argwhere(np.asarray(initial_board) == 64)
 
     transition_map = {}
 
@@ -71,14 +72,14 @@ def make_transition_map(initial_board):
 
     # function to check whether selected grid is a wall grid or not
     def check_wall_state(x, y):
-        if [y, x] in walls.tolist():
+        if [x, y] in walls.tolist():
             return True
         else:
             return False
 
     # function to check whether termination state is reached in next state
     def check_termination(x, y):
-        if [y, x] in terminal_states.tolist():
+        if [x, y] in terminal_states.tolist():
             return 1.0, True
         else:
             return 0.0, False

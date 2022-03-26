@@ -15,9 +15,14 @@ class DPAgent():
     def __init__(self, nact, transitions_map, init_value=0.0):
         self.nact = nact
         
+        # environment model [state][action] : (probability, next state, reward, termination) tuples
         self.transitions_map = transitions_map
+
+        # initialize value function values for each agent state
         self.values = {s: init_value for s in self.transitions_map.keys()}
-        self.policy_dist = {s: [1.0/nact] * nact for s in self.transitions_map.keys()}
+        
+        # initialize uniform policy distribution where agent has the same probability of doing an action in all states
+        self.policy_dist = {s: [1.0 / nact] * nact for s in self.transitions_map.keys()}
 
     def policy(self, state):
         """
@@ -30,7 +35,7 @@ class DPAgent():
                 policy_dist[S] = [1, 0, 0, 0]
 
             Arguments:
-                - state: State/observation of the environment
+                - state: State / observation of the environment
 
             Returns:
                 action for the given state
@@ -54,13 +59,52 @@ class DPAgent():
             Return:
                 delta
         """
+
+        # initialize maximum amount of change among all possible states
+        delta = 0.0
+
+        # number of action at each state
+        n_actions = self.nact
+
+        # store each value update inside a buffer,
+        # after all values in all states are calculated for one iteration, update original value function
+        buffer_value = {}
+
+        # loop through all passible states
+        for state in self.values.keys():
+
+            new_value = 0.0
+
+            # loop through all possible actions
+            for action in range(n_actions):
+                transitions = self.transitions_map[state][action]
+
+                # sum of all probability values of the Bellman equation for doing an action
+                sum_bellman = 0.0
+
+                # each possible transition for applying an action
+                for trans in transitions:
+                    probability = trans[0]
+                    next_state = trans[1]
+                    reward = trans[2]
+                    terminate = trans[3]
+
+                    sum_bellman += probability * (reward + gamma * self.values[next_state] * (1 - int(terminate)))
+
+                # apply iteration policy evaluation with respect to action probability of the policy
+                new_value += self.policy_dist[state][action] * sum_bellman
+            
+            # update delta (difference between new updated state and the old previous state value function)
+            delta = max(delta, abs(self.values[state] - new_value))
+
+            # update current value function
+            buffer_value[state] = new_value
+
+        # only update value function after one policy evaluation iteration is done in all states
+        for state in self.values.keys():
+            self.values[state] = buffer_value[state]
         
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        return delta
 
     def policy_improvement(self, gamma=0.95):
         """

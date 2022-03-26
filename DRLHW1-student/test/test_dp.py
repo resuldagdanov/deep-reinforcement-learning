@@ -35,7 +35,7 @@ class TestDPMethods(unittest.TestCase):
                                    (0.1, (2, 4), 0.0, False),
                                    (0.1, (2, 5), 0.0, False)]
 
-    def _test_policy_eval(self):
+    def test_policy_eval(self):
 
         tmap = make_transition_map(self.board)
         agent = DPAgent(4, tmap)
@@ -50,6 +50,7 @@ class TestDPMethods(unittest.TestCase):
 
         tmap = make_transition_map(self.board)
         agent = DPAgent(4, tmap)
+        
         agent.one_step_policy_eval()
         agent.policy_improvement()
 
