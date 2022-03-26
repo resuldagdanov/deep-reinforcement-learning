@@ -5,9 +5,6 @@
 """
 
 
-from numpy import argmax
-
-
 class DPAgent():
     """
         Base Dynamic Programming class. DP methods requires the transition map in order to optimize policies.
@@ -94,6 +91,7 @@ class DPAgent():
                     reward = trans[2]
                     terminate = trans[3]
 
+                    # compute Bellman equation
                     sum_bellman += probability * (reward + gamma * self.values[next_state] * (1 - int(terminate)))
 
                 # apply iteration policy evaluation with respect to action probability of the policy
@@ -158,6 +156,7 @@ class DPAgent():
                     reward = trans[2]
                     terminate = trans[3]
 
+                    # compute Bellman equation
                     state_value += probability * (reward + gamma * self.values[next_state] * (1 - int(terminate)))
 
                 # store value of making this action
