@@ -5,6 +5,9 @@
 """
 
 
+from telnetlib import DO
+
+
 class DPAgent():
     """
         Base Dynamic Programming class. DP methods requires the transition map in order to optimize policies.
@@ -200,12 +203,24 @@ class PolicyIteration(DPAgent):
             This should not take more than 10 lines.
         """
 
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        # object to use policy improvement and evaluation functions
+        dp_agent = DPAgent()
+
+        for _ in range(n_iteration):
+
+            # loop until value function is improves less than epsilon
+            delta = 10^6
+            while delta > epsilon:
+            
+                # run policy evaluation algorithm to update value function
+                delta = dp_agent.one_step_policy_eval(gamma=gamma)
+
+            # run policy improvement algorithm to update policy distribution
+            is_stable = dp_agent.policy_improvement(gamma=gamma)
+
+            # loop until improvements in policy distribution is converged to stability
+            if is_stable:
+                break
 
 
 class ValueIteration(DPAgent):
