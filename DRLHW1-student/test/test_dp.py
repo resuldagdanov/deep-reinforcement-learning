@@ -46,11 +46,11 @@ class TestDPMethods(unittest.TestCase):
         agent.one_step_policy_eval(gamma=1)
         self.assertEqual(agent.values[(2, 5)], 0.3125)
 
-    def _test_policy_improvement(self):
+    def test_policy_improvement(self):
 
         tmap = make_transition_map(self.board)
         agent = DPAgent(4, tmap)
-        
+
         agent.one_step_policy_eval()
         agent.policy_improvement()
 
@@ -64,4 +64,5 @@ class TestDPMethods(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    
     unittest.main()

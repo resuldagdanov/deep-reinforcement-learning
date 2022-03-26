@@ -5,6 +5,9 @@
 """
 
 
+from numpy import argmax
+
+
 class DPAgent():
     """
         Base Dynamic Programming class. DP methods requires the transition map in order to optimize policies.
@@ -41,12 +44,14 @@ class DPAgent():
                 action for the given state
         """
 
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        # policy distribution for the given state
+        distibution = self.policy_dist[state]
+
+        # get maximum valued action from the distribution
+        # acting greedy in finding maximum value action
+        action = distibution.index(max(distibution))
+        
+        return action
 
     def one_step_policy_eval(self, gamma=0.95):
         """
@@ -111,8 +116,8 @@ class DPAgent():
             Policy impovement updates the policy according to the most recent values.
             You can follow the ideas given in the "Reinforcement Learing (Sutton & Barta) chapter 4.2.
             Basically, look one step ahead to choose the best action. Remember to return a boolean value to state
-            if the policy is stable Also note that, improved policy must be deterministic.
-            So that, at each state only one action is probable(like onehot vector).
+            if the policy is stable. Also note that, improved policy must be deterministic.
+            So that, at each state only one action is probable (like onehot vector).
             
             Example policy:
                 policy_dist[S] = [0, 1, 0, 0]
@@ -124,12 +129,54 @@ class DPAgent():
                 a boolean value stating if stability is reached
         """
 
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        # stability of the policy
+        is_stable = False
+
+        # number of action at each state
+        n_actions = self.nact
+
+        # loop through all passible states
+        for state in self.values.keys():
+
+            # previous taken action for the same state
+            prev_action = self.policy(state)
+
+            # value of making each action
+            action_values = []
+
+            # loop through all possible actions
+            for action in range(n_actions):
+                transitions = self.transitions_map[state][action]
+
+                # sum of all probability values of the Bellman equation for doing an action
+                state_value = 0.0
+
+                # each possible transition for applying an action
+                for trans in transitions:
+                    probability = trans[0]
+                    next_state = trans[1]
+                    reward = trans[2]
+                    terminate = trans[3]
+
+                    state_value += probability * (reward + gamma * self.values[next_state] * (1 - int(terminate)))
+
+                # store value of making this action
+                action_values.append(state_value)
+
+            # counting of all values to normalize and find the probability of each action
+            count_values = action_values.count(max(action_values))
+   
+            # compute action probabilities for each state
+            for action in range(n_actions):
+
+                # deterministic: make maximum value action 1 and others 0
+                self.policy_dist[state][action] = 1 / count_values if action_values[action] == max(action_values) else 0
+            
+            # check the whether the policy is improved after acting greedy on updated value function
+            if prev_action == self.policy(state):
+                is_stable = True
+        
+        return is_stable
 
 
 class PolicyIteration(DPAgent):
