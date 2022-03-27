@@ -136,7 +136,7 @@ class SarsaAgent(TabularTDAgent):
     def __init__(self, nact):
         super().__init__(nact)
 
-    def update(self, trans, alpha, gamma):
+    def update(self, transition, alpha, gamma):
         """
             Update values of a state-action pair based on the given transition and parameters.
 
@@ -149,9 +149,13 @@ class SarsaAgent(TabularTDAgent):
                 temporal diffrence error
         """
         
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        # one step transition tuple
+        state, action, reward, next_state, next_action = transition
+
+        # temporal difference error is calculated with only using transition tuple variables
+        td_err = reward + (gamma * self.qvalues[next_state][next_action]) - self.qvalues[state][action]
+
+        # apply temporal difference update method
+        self.qvalues[state][action] = self.qvalues[state][action] + (alpha * td_err)
+
+        return td_err
