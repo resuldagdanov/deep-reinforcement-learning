@@ -6,6 +6,7 @@
 
 import numpy as np
 import time
+import random
 from collections import namedtuple
 
 
@@ -33,12 +34,7 @@ class ApproximateAgent():
             Return the best possible action according to the value function
         """
 
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        return np.argmax(self.q_values(state))
 
     def e_greedy_policy(self, state, epsilon):
         """
@@ -46,12 +42,18 @@ class ApproximateAgent():
             probability and any other action with probability episolon/#action.
         """
 
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        # generate random number between [0 - 1]
+        rand_number = random.random()
+
+        # select random action (exploration)
+        if rand_number <= epsilon:
+            action = random.randrange(start=0, stop=self.nact, step=1)
+        
+        # select greedy action (exploitation)
+        else:
+            action = self.greedy_policy(state=state)
+
+        return action
 
     def train(self, env, policy, args):
         """
@@ -71,13 +73,58 @@ class ApproximateAgent():
                 - Loss list of the training (one loss for per update)
         """
 
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        # fix seeds
+        random.seed(args.seed)
+        np.random.seed(args.seed)
 
+        # initiate an episodic reward list
+        list_reward = []
+        list_loss = []
+
+        # initial epsilon value which will be changed in each episode
+        epsilon = args.init_eps
+
+        # loop through each episode
+        for eps in range(args.episodes):
+            done = False
+
+            # initialize total reward obtained in one episode
+            episodic_reward = 0.0
+            
+            # calculate epsilon with exponential decay
+            epsilon = max(min(args.init_eps, epsilon * args.eps_decay_rate), args.final_eps)
+
+            # first environment reset
+            obs = env.reset()
+
+            # get epsilon-greedy policy action for initial state observation
+            action = self.e_greedy_policy(state=obs, epsilon=epsilon)
+
+            # loop until terminate state is reached
+            while done is False:
+
+                # step in the enviroment to get one step transition
+                next_obs, reward, done, info = env.step(action)
+                episodic_reward += reward
+
+                # next action in the transition is calculated with current policy (epsilon-greedy)
+                next_action = policy(state=next_obs, epsilon=epsilon)
+
+                transition = (obs, action, reward, next_obs, next_action)
+
+                # update the value function using given transition by returning mean squered td error loss
+                loss = self.update(transition=transition, alpha=args.alpha, gamma=args.gamma)
+                list_loss.append(loss)
+
+                obs = next_obs
+                action = next_action
+            
+            # call evaluation function and store episodic reward
+            if eps % args.evaluate_period == 0:
+                list_reward.append(episodic_reward)
+            
+        return list_reward, list_loss
+    
     def update(self, *arg, **kwargs):
         raise NotImplementedError
 
@@ -107,12 +154,19 @@ class ApproximateQAgent(ApproximateAgent):
                 Mean squared temporal difference error
         """
 
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        # open the given transition tuple
+        state, action, reward, next_state, next_action = transition
+
+        # calculate gradient of weights using numpy function
+        gradients = np.array(np.gradient(self.weights)[0])
+
+        # compute mean squared temporal-difference error with gradients
+        mean_td_err = gradients * (reward + (gamma * self.q_values(next_state)[next_action]) - self.q_values(state)[action])
+
+        # apply temporal-difference update method to optimize weight
+        self.weights = self.weights + (alpha * mean_td_err)
+
+        return mean_td_err
 
     def evaluate(self, env, render=False):
         """
@@ -125,9 +179,26 @@ class ApproximateQAgent(ApproximateAgent):
                 Episodic reward
         """
 
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        done = False
+        episode_reward = 0.0
+        
+        # initialize environment reset
+        obs = env.reset()
+
+        # loop one episode until termination state is reached
+        while done is False:
+
+            # step a greedy action in the environment
+            action = self.greedy_policy(state=obs)
+            obs, reward, done, info = env.step(action)
+
+            # cumulative episodic reward
+            episode_reward += reward
+
+            # whether to visualize environment or not
+            if render:
+                env.render(mode='close')
+        
+        env.close()
+
+        return episode_reward
