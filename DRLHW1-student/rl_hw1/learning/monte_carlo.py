@@ -26,12 +26,12 @@ class TabularAgent:
             Policy that returns the best action according to q values.
         """
 
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        # returns each action to determine each action's q-value
+        q_values = self.qvalues[state]
+
+        # greedy action is the action resulting in maximum q-value
+        max_q_action = q_values.index(max(q_values))
+        return max_q_action
 
     def e_greedy_policy(self, state, epsilon, *args, **kwargs):
         """
@@ -39,12 +39,18 @@ class TabularAgent:
             probability and any other action with probability episolon/#action.
         """
 
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        # generate random number between [0 - 1]
+        rand_number = random.random()
+
+        # select random action (exploration)
+        if rand_number <= epsilon:
+            action = random.randrange(self.nact)
+        
+        # select greedy action (exploitation)
+        else:
+            action = self.greedy_policy(state=state)
+
+        return action
 
     def evaluate(self, env, render=False):
         """
@@ -57,13 +63,28 @@ class TabularAgent:
             Return:
                 Episodic reward
         """
+
+        done = False
+        episode_reward = 0.0
         
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        # initialize environment reset
+        obs = env.reset()
+
+        # loop one episode until termination state is reached
+        while done is False:
+
+            # step a greedy action in the environment
+            action = self.greedy_policy(state=obs)
+            obs, reward, done, info = env.step(action)
+
+            # cumulative episodic reward
+            episode_reward += reward
+
+            # whether to visualize environment or not
+            if render:
+                env.render()
+        
+        return episode_reward
 
 
 class MonteCarloAgent(TabularAgent):
@@ -74,7 +95,7 @@ class MonteCarloAgent(TabularAgent):
     def __init__(self, nact):
         super().__init__(nact)
 
-    def one_epsiode_train(self, env, policy, gamma, alpha):
+    def one_episode_train(self, env, policy, gamma, alpha):
         """
             Single episode training function.
             
@@ -88,12 +109,54 @@ class MonteCarloAgent(TabularAgent):
                 episodic reward
 
             **Note** that in the book (Sutton & Barto), they directly assign the return to q value.
-            You can either implemenet that algorithm (given in chapter 5) or use exponential decaying update (using alpha).
+            You can either implement that algorithm (given in chapter 5) or use exponential decaying update (using alpha).
         """
         
-        #  ______   _____   _        _
-        # |  ____| |_   _| | |      | |
-        # | |__      | |   | |      | |
-        # |  __|     | |   | |      | |
-        # | |       _| |_  | |____  | |____
-        # |_|      |_____| |______| |______|
+        done = False
+        episode_reward = 0.0
+        episode_transitions = []
+
+        # initialize environment reset
+        obs = env.reset()
+
+        # loop one episode until termination state to collect transition trajectories
+        while done is False:
+
+            # step in the environment with given policy
+            action = policy(obs)
+            next_obs, reward, done, info = env.step(action)
+
+            # cumulative episodic reward
+            episode_reward += reward
+
+            # state, action, reward, done -> tuple transition
+            transition = (obs, action, reward, done)
+            episode_transitions.append(transition)
+
+            obs = next_obs
+
+        # episode total return
+        G = 0
+        returns = []
+        
+        episode_transitions.reverse()
+
+        # loop for each step of generated episode
+        for transition in episode_transitions:
+
+            state = transition[0]
+            action = transition[1]
+            reward = transition[2]
+            done = transition[3]
+
+            # cummulatively update total return
+            G = reward + (gamma * G)
+            returns.append(G)
+
+            # take an average of total returns
+            avg_returns = sum(returns) / len(returns)
+
+            # update q value function
+            self.qvalues[state][action] = avg_returns
+
+        return episode_reward
