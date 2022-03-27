@@ -44,7 +44,7 @@ class TabularAgent:
 
         # select random action (exploration)
         if rand_number <= epsilon:
-            action = random.randrange(self.nact)
+            action = random.randrange(start=0, stop=self.nact, step=1)
         
         # select greedy action (exploitation)
         else:
@@ -157,6 +157,6 @@ class MonteCarloAgent(TabularAgent):
             avg_returns = sum(returns) / len(returns)
 
             # update q value function
-            self.qvalues[state][action] = avg_returns
+            self.qvalues[state][action] += avg_returns
 
         return episode_reward
