@@ -142,7 +142,7 @@ class MonteCarloAgent(TabularAgent):
         episode_transitions.reverse()
 
         # loop for each step of generated episode
-        for transition in episode_transitions:
+        for idx, transition in enumerate(episode_transitions):
 
             state = transition[0]
             action = transition[1]
@@ -157,6 +157,6 @@ class MonteCarloAgent(TabularAgent):
             avg_returns = sum(returns) / len(returns)
 
             # update q value function
-            self.qvalues[state][action] += avg_returns
+            self.qvalues[state][action] += alpha * avg_returns
 
         return episode_reward
