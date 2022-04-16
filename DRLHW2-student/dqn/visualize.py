@@ -3,10 +3,7 @@ import numpy as np
 import pandas as pd
 
 import plotly.graph_objects as go
-from ipywidgets import (Layout,
-                        VBox,
-                        Dropdown,
-                        FloatSlider)
+from ipywidgets import (Layout, VBox, Dropdown, FloatSlider)
 
 
 class Plotter():
@@ -30,16 +27,16 @@ class Plotter():
 
         for exp_name, frames in dataframe_dict.items():
             frame_lengths = set()
+            
             for frame in frames:
                 frame_lengths.add(frame.size)
             if len(frame_lengths) > 1:
                 raise ValueError((f"Frame lengths in experiment {exp_name} are not the same."
                                   f" Unique frame lengths: {frame_lengths}. Make sure "
                                   f"you fix n-iterations and write-period within an experiment."))
+        
         self.fig = go.FigureWidget()
-        self.fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",)
+        self.fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",)
 
         self.x_name = None
         self.y_name = None
@@ -150,8 +147,7 @@ class Plotter():
         self.render_figure()
 
     def _add_traces(self, dataframe: pd.DataFrame, color: str, legend_name: str) -> None:
-        y_values = np.stack([df[self.y_name].to_numpy()
-                             for df in dataframe], axis=0)
+        y_values = np.stack([df[self.y_name].to_numpy() for df in dataframe], axis=0)
 
         median = np.quantile(y_values, 0.5, interpolation="nearest", axis=0)
         upper_quantile = np.quantile(
