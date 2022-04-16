@@ -37,9 +37,6 @@ class BaseDQN(torch.nn.Module, ABC):
                 int: selected action
         """
 
-        # convert state observation to torch tensor
-        state = self.state_to_torch(state, "cuda")
-
         # get values for given state observation without changing gradients of the network
         with torch.no_grad():
             values = self.valuenet.forward(state)
@@ -136,6 +133,9 @@ class BaseDQN(torch.nn.Module, ABC):
             # loop over steps in episode
             done = False
             while not done:
+
+                # convert state observation to torch tensor
+                state = self.state_to_torch(state, device=device)
                 
                 # current greedy policy is evaluated
                 action = self.greedy_policy(state)
@@ -147,7 +147,7 @@ class BaseDQN(torch.nn.Module, ABC):
                 episode_reward += reward
 
                 # render environment
-                if env.render_enabled:
+                if render:
                     env.render()
             
             episode_step_reward.append(episode_reward)
