@@ -15,17 +15,17 @@ from dqn.common import linear_annealing, exponential_annealing, PrintWriter, CSV
 
 
 class Trainer:
-    """ Training class that organize evaluation, update, and transition gathering.
+    """
+        Training class that organize evaluation, update, and transition gathering.
 
-    Args:
-        args (argparse.Namespace): CL arguments
-        agent (DQN): DQN Agent
-        opt (torch.optim.Optimizer): Optimizer for agents parameters
-        env (gym.Env): Environment
+        Args:
+            args (argparse.Namespace): CL arguments
+            agent (DQN): DQN Agent
+            opt (torch.optim.Optimizer): Optimizer for agents parameters
+            env (gym.Env): Environment
     """
 
     def __init__(self, args: argparse.Namespace, agent: DQN, opt: torch.optim.Optimizer, env: gym.Env):
-
         self.env = env
         self.args = args
         self.agent = agent
@@ -35,9 +35,11 @@ class Trainer:
         self.eval_rewards = []
         self.td_loss = []
         self.log_dir = args.log_dir
+
         if self.log_dir is None:
             self.log_dir = TemporaryDirectory().name
             warnings.warn("Temporary Logging directory: {}".format(self.log_dir))
+            
         self._writers = [PrintWriter(flush=True), CSVwriter(self.log_dir)]
 
         self.checkpoint_reward = -np.inf
@@ -57,59 +59,65 @@ class Trainer:
             )
 
     def __call__(self) -> None:
-        """ Start training """
+        """
+            Start training
+        """
+        
         for iteration, trans in enumerate(self):
             self.evaluation(iteration)
+
             self.agent.push_transition(trans)
+
             self.update(iteration)
             self.writer(iteration)
 
     def evaluation(self, iteration: int) -> None:
-        """ Evaluate the agent if the index "iteration" equals to the evaluation period. 
-        If "save_model" is given the current best model is saved based on the
-        evaluation score. Evaluation score appended into the "eval_rewards"
-        list to keep track of evaluation scores.
-
-        Args:
-            iteration (int): Training iteration
-
-        Raises:
-            FileNotFoundError:  If "save_model" is given in arguments and
-                directory given by "model_dir" does not exist
         """
+            Evaluate the agent if the index "iteration" equals to the evaluation period. 
+            If "save_model" is given the current best model is saved based on the evaluation score.
+            Evaluation score appended into the "eval_rewards" list to keep track of evaluation scores.
+
+            Args:
+                iteration (int): Training iteration
+
+            Raises:
+                FileNotFoundError:  If "save_model" is given in arguments and directory given by "model_dir" does not exist
+        """
+
         if iteration % self.args.eval_period == 0:
 
             self.eval_rewards.append(
-                self.agent.evaluate(self.args.eval_episode,
-                                    self.env,
-                                    self.args.device,
-                                    self.args.render))
+                self.agent.evaluate(self.args.eval_episode, self.env, self.args.device, self.args.render))
+
             if self.eval_rewards[-1] > self.checkpoint_reward and self.args.save_model:
                 self.checkpoint_reward = self.eval_rewards[-1]
+                
                 model_id = "{}_{:6d}_{:6.3f}.b".format(
                     self.agent.__class__.__name__,
                     iteration,
                     self.eval_rewards[-1]).replace(" ", "0")
+                
                 if not os.path.exists(self.args.model_dir):
                     raise FileNotFoundError(
                         "No directory as {}".format(self.args.model_dir))
-                torch.save(dict(
-                    model=self.agent.state_dict(),
-                    optim=self.opt.state_dict(),
-                ), os.path.join(self.args.model_dir, model_id)
-                )
+                
+                torch.save(dict(model=self.agent.state_dict(), optim=self.opt.state_dict(),),
+                    os.path.join(self.args.model_dir, model_id))
 
     def update(self, iteration: int) -> None:
-        """ One step updating function. Update the agent in training mode,
-        clip gradient if "clip_grad" is given in args, and keep track of td
-        loss. Check for the training index "iteration" to start the update.
-
-        Append td loss to "self.td_loss" list
-
-        Args:
-            iteration (int): Training iteration
         """
+            One step updating function. Update the agent in training mode,
+            clip gradient if "clip_grad" is given in args, and keep track of td
+            loss. Check for the training index "iteration" to start the update.
+
+            Append td loss to "self.td_loss" list
+
+            Args:
+                iteration (int): Training iteration
+        """
+
         self.agent.train()
+
         raise NotImplementedError
         #  /$$$$$$$$ /$$$$$$ /$$       /$$
         # | $$_____/|_  $$_/| $$      | $$
@@ -121,11 +129,13 @@ class Trainer:
         # |__/      |______/|________/|________/
 
     def writer(self, iteration: int) -> None:
-        """ Simple writer function that feed PrintWriter with statistics 
-
-        Args:
-            iteration (int): Training iteration
         """
+            Simple writer function that feed PrintWriter with statistics 
+
+            Args:
+                iteration (int): Training iteration
+        """
+        
         if iteration % self.args.write_period == 0:
             for _writer in self._writers:
                 _writer(
@@ -139,14 +149,14 @@ class Trainer:
                 )
 
     def __iter__(self) -> Generator[UniformBuffer.Transition, None, None]:
-        """ Experience collector function that yields a transition at every
-        iteration for "args.n_iterations" iterations by collecting experience
-        from the environment. If the environment terminates, append the episodic
-        reward and reset the environment. 
-
-        Append episodic reward to "self.train_rewards" at every termination
-
         """
+            Experience collector function that yields a transition at every iteration for "args.n_iterations"
+            iterations by collecting experience from the environment. If the environment terminates,
+            append the episodic reward and reset the environment. 
+
+            Append episodic reward to "self.train_rewards" at every termination
+        """
+
         raise NotImplementedError
         #  /$$$$$$$$ /$$$$$$ /$$       /$$
         # | $$_____/|_  $$_/| $$      | $$
