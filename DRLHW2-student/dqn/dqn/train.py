@@ -106,9 +106,8 @@ class Trainer:
 
     def update(self, iteration: int) -> None:
         """
-            One step updating function. Update the agent in training mode,
-            clip gradient if "clip_grad" is given in args, and keep track of td
-            loss. Check for the training index "iteration" to start the update.
+            One step updating function. Update the agent in training mode, clip gradient if "clip_grad" is given in args,
+            and keep track of td loss. Check for the training index "iteration" to start the update.
 
             Append td loss to "self.td_loss" list
 
@@ -118,15 +117,38 @@ class Trainer:
 
         self.agent.train()
 
-        raise NotImplementedError
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
+        # before updating make sure that the number of stored transitions are greater than the batch size
+        if iteration >= self.args.batch_size:
+            
+            # checking whether updating initialization starting iteration is reached
+            if iteration >= self.args.start_update:
+
+                # sample a transitions from the replay buffer in size of a mini-batch
+                transitions = self.agent.buffer.sample(self.args.batch_size)
+
+                # reset an optimizer
+                self.opt.grad_zero()
+
+                # compute temporal-difference loss of this batch
+                loss = self.agent.loss(transitions, self.args.gamma)
+
+                # keeping track of the td-loss
+                self.td_loss.append(loss.item())
+
+                # backpropagate with computed loss through value network
+                loss.backward()
+
+                # clip each parameter of the value network between [-1 1] if required
+                if self.args.clip_grad:
+                    for param in self.agent.valuenet.parameters():
+                        param.grad.data.clamp_(-1, 1)
+                
+                # update optimizer
+                self.opt.step()
+
+                # update target network with given frequency period
+                if (iteration % self.args.target_update_period) == 0:
+                    self.agent.update_target()
 
     def writer(self, iteration: int) -> None:
         """
@@ -145,8 +167,7 @@ class Trainer:
                         "Eval reward": self.eval_rewards[-1],
                         "TD loss": np.mean(self.td_loss[-100:]),
                         "Episode": len(self.train_rewards)
-                    },
-                )
+                    })
 
     def __iter__(self) -> Generator[UniformBuffer.Transition, None, None]:
         """
@@ -157,12 +178,42 @@ class Trainer:
             Append episodic reward to "self.train_rewards" at every termination
         """
 
-        raise NotImplementedError
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
+        # initialize total reward for this episode
+        episode_reward = 0.0
+
+        # loop over steps in episode
+        done = False
+        while not done:
+
+            # store current state for yielding in transition
+            yielding_state = self.state
+
+            # current epsilon-greedy (stochastic) policy is evaluated
+            action = self.agent.e_greedy_policy(self.state, self.epsilon)
+            
+            # step in the environment with this epsilon-greedy action
+            next_state, reward, done, _ = self.env.step(action)
+
+            # accumulate reward
+            episode_reward += reward
+
+            # termination
+            if done:
+                yielding_done = True
+
+                # get updated epsilon
+                self.epsilon = next(self.epsilon_iterator)
+
+                # reset the environment
+                self.state = self.env.reset()
+                self.train_rewards.append(episode_reward)
+
+                episode_reward = 0.0
+                done = False
+            
+            # continue with next transition steps if not terminated
+            else:
+                yielding_done = False
+                self.state = next_state
+
+            yield self.agent.Transition(yielding_state, action, reward, next_state, yielding_done)
