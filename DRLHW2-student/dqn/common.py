@@ -86,15 +86,17 @@ def linear_annealing(init_value: float, min_value: float, decay_range: int) -> G
         Yields:
             Generator[float, None, None]: Generator that yields decayed values at every call
     """
-    raise NotImplementedError
-    #  /$$$$$$$$ /$$$$$$ /$$       /$$
-    # | $$_____/|_  $$_/| $$      | $$
-    # | $$        | $$  | $$      | $$
-    # | $$$$$     | $$  | $$      | $$
-    # | $$__/     | $$  | $$      | $$
-    # | $$        | $$  | $$      | $$
-    # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-    # |__/      |______/|________/|________/
+    
+    # store current initialized value of epsilon
+    epsilon = init_value
+
+    # linear decaying epsilon
+    epsilon_decay = (epsilon - min_value) / decay_range
+
+    # yield an epsilon value at every call
+    while True:
+        epsilon = max(min_value, epsilon - epsilon_decay)
+        yield epsilon
 
 
 def exponential_annealing(init_value: float, min_value: float, decay_ratio) -> Generator[int, None, None]:
@@ -104,20 +106,21 @@ def exponential_annealing(init_value: float, min_value: float, decay_ratio) -> G
         Args:
             init_value (float): Initial value
             min_value (float): Minimum value.
-            decay_ratio (float): Exponent of the value (0<decay_ratio<1)
+            decay_ratio (float): Exponent of the value (0 < decay_ratio < 1)
 
         Yields:
             Generator[float, None, None]: Generator that yields decayed values at every call
     """
-    raise NotImplementedError
-    #  /$$$$$$$$ /$$$$$$ /$$       /$$
-    # | $$_____/|_  $$_/| $$      | $$
-    # | $$        | $$  | $$      | $$
-    # | $$$$$     | $$  | $$      | $$
-    # | $$__/     | $$  | $$      | $$
-    # | $$        | $$  | $$      | $$
-    # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-    # |__/      |______/|________/|________/
+    
+    # store current initialized value of epsilon
+    epsilon = init_value
+
+    # yield an epsilon value at every call
+    while True:
+
+        # exponentially decaying epsilon
+        epsilon = max(min_value, epsilon * decay_ratio)
+        yield epsilon
 
 
 class ResizeAndScalePong(gym.ObservationWrapper):
