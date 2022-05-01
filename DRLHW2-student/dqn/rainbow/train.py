@@ -59,15 +59,64 @@ class Trainer(BaseTrainer):
                 iteration (int): Training iteration
         """
         
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        return super().update(iteration)
+        self.agent.train()
+
+        # before updating make sure that the number of stored transitions are greater than the batch size
+        if iteration >= self.args.batch_size:
+
+            # checking whether updating initialization starting iteration is reached
+            if iteration >= self.args.start_update:
+
+                # reset an optimizer
+                self.opt.zero_grad()
+
+                if self.args.no_prioritized:
+                    # sample a transitions from the replay buffer in size of a mini-batch
+                    transitions = self.agent.buffer.sample(self.args.batch_size)
+
+                    # compute mean temporal-difference loss of this batch (with averaging)
+                    avg_loss = self.agent.loss(transitions, self.args.gamma).mean()
+                
+                else:
+                    # sample a transitions from the prioritized replay buffer along with weigths and indices
+                    transitions, selected_indices, weights = self.agent.buffer.sample(batch_size=self.args.batch_size, beta=self.prioritized_beta)
+
+                    # compute temporal-difference loss of this batch (without averaging)
+                    loss = self.agent.loss(transitions, self.args.gamma)
+
+                    # filter out negative td-losses
+                    loss[loss < 0.0] = 0.0
+
+                    td_values = loss.detach().cpu().numpy()
+                    weights = torch.tensor(weights).to(self.args.device)
+
+                    # averaging td-loss with weights
+                    avg_loss = torch.mean(td_values * weights)
+
+                    self.agent.buffer.update_priority(indices=selected_indices, td_values=td_values)
+
+                # keeping track of the mean td-loss
+                self.td_loss.append(avg_loss.item())
+
+                # backpropagate with computed loss through value network
+                loss.backward()
+
+                # clip each parameter of the value network between [-1 1] if required
+                if self.args.clip_grad:
+                    for param in self.agent.valuenet.parameters():
+                        param.grad.data.clamp_(-1, 1)
+                
+                # update optimizer
+                self.opt.step()
+
+                # update target network with given frequency period
+                if (iteration % self.args.target_update_period) == 0:
+                    self.agent.update_target()
+
+                # reset noise for value and target network
+                if not self.args.no_noisy:
+                    self.agent.valuenet.head.reset_noise()
+                    self.agent.targetnet.head.reset_noise()
 
     def __iter__(self) -> Generator[RainBow.Transition, None, None]:
         """
@@ -77,12 +126,67 @@ class Trainer(BaseTrainer):
                 Generator[RainBow.Transition, None, None]: Transition of (s_t, a_t, \sum_{j=t}^{t+n}(\gamma^{j-t} r_j), done, s_{t+n})
         """
         
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        yield from super().__iter__()
+        # initialize total reward for this episode
+        episode_reward = 0.0
+
+        # initialize cumulative reward computed with discount factor
+        cumulative_reward = 0.0
+
+        # horizon for each episode
+        n_steps = self.args.n_steps
+
+        # initialize episode step counter
+        step = 0
+
+        # loop over steps in episode
+        done = False
+        while not done:
+
+            # store current state for yielding in transition
+            yielding_state = self.state
+
+            # loop in an episode
+            for step in range(n_steps):
+
+                if self.args.no_noisy:
+                    # current epsilon-greedy (stochastic) policy is evaluated
+                    action = self.agent.e_greedy_policy(state=torch.Tensor(self.state).to(self.args.device), epsilon=self.epsilon_value)
+                else:
+                    # current greedy policy is evaluated
+                    action = self.agent.greedy_policy(state=torch.Tensor(self.state).to(self.args.device))
+                
+                # yield first action
+                if step == 0:
+                    yielding_action = action
+                
+                # step in the environment with this epsilon-greedy action
+                next_state, reward, done, _ = self.env.step(action)
+
+                # termination state
+                yielding_done = done
+
+                # accumulate reward
+                episode_reward += reward
+
+                # cumulative reward for the next states
+                cumulative_reward += reward * self.args.gamma ** (step + 1)
+
+                # termination
+                if done:
+                    # get updated epsilon
+                    self.epsilon_value = next(self.epsilon)
+
+                    # reset the environment
+                    self.state = self.env.reset()
+                    self.train_rewards.append(episode_reward)
+
+                    episode_reward = 0.0
+                    done = False
+
+                    break
+            
+                # continue with next transition steps if not terminated
+                else:
+                    self.state = next_state
+
+            yield self.agent.Transition(yielding_state, yielding_action, cumulative_reward, next_state, yielding_done)
