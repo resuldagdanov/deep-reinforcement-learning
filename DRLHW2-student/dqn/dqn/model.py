@@ -55,7 +55,7 @@ class DQN(BaseDQN):
         terminal = torch.Tensor(batch.terminal).float().to(device)
 
         # target network (comes from BaseDQN class) is used to find the values of the next-states
-        value_next_state = self.targetnet(next_state).to(device)
+        value_next_state, _ = torch.max(self.targetnet(next_state).to(device), dim=1)
 
         # compute Bellman expectation
         expected_value_state = (value_next_state * gamma) + reward
@@ -65,7 +65,6 @@ class DQN(BaseDQN):
 
         # calculate loss between expected value and current value of the state
         loss_function = torch.nn.MSELoss(reduction='mean')
-        loss = loss_function(expected_value_state, value_state)
+        loss = loss_function(value_state, expected_value_state)
 
         return loss
-        

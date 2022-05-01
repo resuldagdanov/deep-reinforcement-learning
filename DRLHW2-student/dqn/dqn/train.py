@@ -57,6 +57,9 @@ class Trainer:
                 args.epsilon_min,
                 args.n_iterations if args.epsilon_range is None else args.epsilon_range
             )
+        
+        self.state = self.env.reset()
+        self.epsilon_value = args.epsilon_init
 
     def __call__(self) -> None:
         """
@@ -127,7 +130,7 @@ class Trainer:
                 transitions = self.agent.buffer.sample(self.args.batch_size)
 
                 # reset an optimizer
-                self.opt.grad_zero()
+                self.opt.zero_grad()
 
                 # compute temporal-difference loss of this batch
                 loss = self.agent.loss(transitions, self.args.gamma)
@@ -166,7 +169,8 @@ class Trainer:
                         "Train reward": np.mean(self.train_rewards[-20:]),
                         "Eval reward": self.eval_rewards[-1],
                         "TD loss": np.mean(self.td_loss[-100:]),
-                        "Episode": len(self.train_rewards)
+                        "Episode": len(self.train_rewards),
+                        "Epsilon": self.epsilon_value
                     })
 
     def __iter__(self) -> Generator[UniformBuffer.Transition, None, None]:
@@ -189,7 +193,7 @@ class Trainer:
             yielding_state = self.state
 
             # current epsilon-greedy (stochastic) policy is evaluated
-            action = self.agent.e_greedy_policy(self.state, self.epsilon)
+            action = self.agent.e_greedy_policy(state=torch.Tensor(self.state).to(self.args.device), epsilon=self.epsilon_value)
             
             # step in the environment with this epsilon-greedy action
             next_state, reward, done, _ = self.env.step(action)
@@ -202,7 +206,7 @@ class Trainer:
                 yielding_done = True
 
                 # get updated epsilon
-                self.epsilon = next(self.epsilon_iterator)
+                self.epsilon_value = next(self.epsilon)
 
                 # reset the environment
                 self.state = self.env.reset()

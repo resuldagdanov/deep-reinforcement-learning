@@ -40,9 +40,7 @@ class ValueNet(torch.nn.Module):
         """
 
         # forward propagation of given state observation
-        output = self.value_network(state)
-        
-        return output
+        return self.value_network(state)
 
 
 def main(args):
@@ -74,6 +72,10 @@ def main(args):
 
 
 if __name__ == "__main__":
+    # use cuda if available, else use cpu
+    if torch.cuda.is_available(): default_device = torch.device('cuda')
+    else: default_device = torch.device('cpu')
+
     parser = argparse.ArgumentParser(description='DQN')
 
     parser.add_argument("--envname", type=str, default="LunarLander-v2", help="Name of the environment")
@@ -83,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=64, help="Batch size of each update in training")
     parser.add_argument("--gamma", type=float, default=0.99, help="Discount Factor")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning Rate")
-    parser.add_argument("--device", type=str, default="cpu", help="Torch device")
+    parser.add_argument("--device", type=str, default=default_device, help="Torch device")
     parser.add_argument("--target-update-period", type=int, default=300, help="Target network update period")
     parser.add_argument("--buffer-capacity", type=int, default=10000, help="Replay buffer capacity")
     parser.add_argument("--epsilon-init", type=float, default=0.9, help="Initial value of the epsilon")
@@ -97,7 +99,7 @@ if __name__ == "__main__":
     parser.add_argument("--model-dir", type=str, default="models/", help="Directory to save models")
     parser.add_argument("--write-period", type=int, default=100, help="Logging period in terms of iterations")
     parser.add_argument("--log_dir", type=str, default=None, help="Logging directory. Default: /tmp")
-    parser.add_argument("--render", action="store_false", help="Render evaluations")
+    parser.add_argument("--render", action="store_false", default=False, help="Render evaluations")
     parser.add_argument("--seed", type=int, default=None, help="Seed value. Default: Random seed")
 
     args = parser.parse_args()
