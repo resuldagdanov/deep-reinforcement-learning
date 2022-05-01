@@ -37,15 +37,28 @@ class PriorityBuffer(BaseBuffer):
                 transition (BaseBuffer.Transition): transition to push to buffer
         """
         
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        raise NotImplementedError
+        # extract the elements from the transition
+        current_state = transition.state
+        action = transition.action
+        reward = transition.reward
+        next_state = transition.next_state
+        terminal = transition.terminal
+
+        # store the transition elements in the buffer with corresponding write_index
+        self.buffer.state[self.write_index] = current_state
+        self.buffer.action[self.write_index] = action
+        self.buffer.reward[self.write_index] = reward
+        self.buffer.next_state[self.write_index] = next_state
+        self.buffer.terminal[self.write_index] = terminal
+
+        # update the write_index
+        self.write_index = (self.write_index + 1) % self.capacity
+
+        # update the size of the buffer, remember that the buffer size could not exeed the capacity
+        self.size = min(self.size + 1, self.capacity)
+
+        # initialize list of priorities with zeros
+        self.priorities = np.zeros((self.capacity, ), dtype=np.float32)
 
     def sample(self, batch_size: int, beta: float) -> Tuple[BaseBuffer.Transition, np.ndarray, np.ndarray]:
         """
@@ -61,16 +74,39 @@ class PriorityBuffer(BaseBuffer):
                     - Indices of the samples (used for priority update)
                     - Importance sampling weights
         """
-        
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        raise NotImplementedError
+
+        # do not sample if the buffer size is less than the batch size
+        if batch_size > self.size:
+            return None
+
+        # get priority values from the buffer
+        all_priorities = self.priorities[:self.write_index]
+
+        # define probabilities
+        probability_alpha = np.array(all_priorities, dtype=np.float32) ** self.alpha
+        probabilities = probability_alpha / probability_alpha.sum()
+
+        # sample random indices of the transitions of size batchsize and sort them
+        # note that we use the modulo operator to ensure that the indices are within the buffer size
+        # samples are not replaced, meaning that the value a could not be sampled twice in one batch
+        random_index = np.random.choice(a=range(self.size), size=batch_size, replace=False)
+        random_index = np.sort(random_index)
+
+        # extract prioritized experience samples from the buffer of size batchsize
+        current_state = self.buffer.state[random_index]
+        action = self.buffer.action[random_index]
+        reward = self.buffer.reward[random_index]
+        next_state = self.buffer.next_state[random_index]
+        terminal = self.buffer.terminal[random_index]
+
+        # store the sampled transition in a namedtuple format
+        transition = self.Transition(current_state, action, reward, next_state, terminal)
+
+        # compute importance sampling weights
+        weights = (self.size * probabilities[random_index]) ** (-beta)
+        weights /= weights.max()
+
+        return transition, random_index, weights
 
     def update_priority(self, indices: np.ndarray, td_values: np.ndarray) -> None:
         """
@@ -82,12 +118,12 @@ class PriorityBuffer(BaseBuffer):
                 td_values (np.ndarray): New td values
         """
         
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        raise NotImplementedError
+        # priority is defined as (temporal-difference value)^(max_abs_td)
+        # self.priorities = np.power(np.array(td_values) + self.epsilon, self.max_abs_td)
+
+        # update with higher absolute td
+        self.max_abs_td = max(td_values)
+
+        # update priority of each index sample
+        for index, value in zip(indices, td_values):
+            self.priorities[index] = (value + self.epsilon) ** self.alpha
