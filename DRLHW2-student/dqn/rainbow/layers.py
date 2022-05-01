@@ -15,8 +15,7 @@ class HeadLayer(torch.nn.Module):
             in_size (int): Input size of the head layer
             act_size (int): Action size
             extensions (Dict[str, Any]): A dictionary that keeps extension information
-            hidden_size (Optional[int], optional): Size of the hidden layer in Dueling 
-            architecture. Defaults to None.
+            hidden_size (Optional[int], optional): Size of the hidden layer in Dueling architecture. Defaults to None.
 
         Raises:
             ValueError: if hidden_size is not given while dueling is active

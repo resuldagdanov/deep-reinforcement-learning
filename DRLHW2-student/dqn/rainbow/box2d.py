@@ -22,15 +22,21 @@ class ValueNet(torch.nn.Module):
 
     def __init__(self, in_size: int, out_size: int, extensions: Dict[str, Any]):
         super().__init__()
-        
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
+
+        hidden_size = 128
+        self.extensions = extensions
+        self.out_size = out_size
+
+        # simple two layer network mlp feature network
+        self.feature_network = torch.nn.Sequential(
+            torch.nn.Linear(in_size, hidden_size),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden_size, hidden_size),
+            torch.nn.ReLU()
+        )
+
+        # head layer is used to for generalization of other dqn extentions in one class
+        self.head_layer = HeadLayer(in_size=hidden_size, act_size=self.out_size, extensions=self.extensions, hidden_size=64)
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:
         """
@@ -43,14 +49,11 @@ class ValueNet(torch.nn.Module):
                 torch.Tensor: Q Value outputs
         """
 
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
+        # forward propagation of given state observation
+        feature_logits = self.feature_network(state)
+        value = self.head_layer(feature_logits)
+
+        return value
 
     def reset_noise(self) -> None:
         """
