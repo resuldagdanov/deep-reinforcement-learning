@@ -24,14 +24,33 @@ class ValueNet(torch.nn.Module):
 
     def __init__(self, in_channel: int, out_size: int, extensions: Dict[str, Any]):
         super().__init__()
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
+
+        self.in_channel = in_channel
+        self.out_size = out_size
+        self.extensions = extensions
+        
+        # when distributional dqn is active, size of atoms are used in output layer
+        if self.extensions['distributional']:
+            self.natoms = self.extensions['distributional']['natoms']
+
+        # convolutional network
+        self.convolutional_embedding = torch.nn.Sequential(
+            torch.nn.Conv2d(self.in_channel, 32, kernel_size=8, stride=4),
+            torch.nn.ReLU(),
+            torch.nn.Conv2d(32, 64, kernel_size=4, stride=2),
+            torch.nn.ReLU(),
+            torch.nn.Conv2d(64, 64, kernel_size=3, stride=1),
+            torch.nn.ReLU()
+        )
+
+        # linear fuature embeddings
+        self.linear_layer = torch.nn.Sequential(
+            torch.nn.Linear(64 * 6 * 6, 512),
+            torch.nn.ReLU()
+        )
+
+        # head layer is used to for generalization of other dqn extentions in one class
+        self.head_layer = HeadLayer(512, self.out_size, self.extensions, 64)
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:
         """
@@ -44,14 +63,25 @@ class ValueNet(torch.nn.Module):
                 torch.Tensor: Q Value outputs
         """
 
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
+        # if the observation is an image with size 80x80, then reshape into channel, height, width
+        if len(state.shape) == 3:
+            state = state.view(1, state.shape[0], state.shape[1], state.shape[2])       
+        assert tuple(state.shape[-2:]) == (80, 80), state.shape
+
+        # get convolution features
+        conv_features = self.convolutional_embedding(state)
+
+        # forward to linear layer
+        linear_features = self.linear(conv_features.reshape(conv_features.shape[0], -1))
+
+        # pass through head layer
+        value = self.head_layer(linear_features)
+
+        # when distributional dqn is active, size of atoms are used in output layer and pass value vector through softmax
+        if self.extensions['distributional']:
+            value = torch.nn.functional.softmax(value.view(-1, self.natoms), 1).view(-1, self.out_size, self.natoms)
+        
+        return value
 
     def reset_noise(self) -> None:
         """
