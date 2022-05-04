@@ -77,31 +77,53 @@ class NoisyLinear(torch.nn.Module):
     def __init__(self, in_size: int, out_size: int, init_std: float):
         super().__init__()
 
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
+        self.in_size = in_size
+        self.out_size = out_size
+        self.init_std = init_std
+
+        # average weigths
+        self.weight_mu = torch.nn.Parameter(torch.Tensor(self.out_size, self.in_size))
+        # standard deviation of weights
+        self.weight_sigma = torch.nn.Parameter(torch.Tensor(self.out_size, self.in_size))
+        self.register_buffer("weight_epsilon", torch.Tensor(self.out_size, self.in_size))
+
+        # average biases
+        self.bias_mu = torch.nn.Parameter(torch.Tensor(self.out_size))
+        # standard deviation of biases
+        self.bias_sigma = torch.nn.Parameter(torch.Tensor(self.out_size))
+        self.register_buffer("bias_epsilon", torch.Tensor(self.out_size))
+
+        self.reset_noise()
 
     def reset_noise(self) -> None:
         """ 
             Reset Noise of the parameters
         """
         
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        raise NotImplementedError
+        # define range of noise
+        mu_range = 1 / math.sqrt(self.in_size)
 
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        # reset weights given the range
+        self.weight_mu.data.uniform_(-mu_range, mu_range)
+        self.weight_sigma.data.fill_(self.init_std / math.sqrt(self.in_size))
+        
+        # reset biases given the range
+        self.bias_mu.data.uniform_(-mu_range, mu_range)
+        self.bias_sigma.data.fill_(self.init_std / math.sqrt(self.out_size))
+
+        # scaling factor for input noise
+        in_epsilon = torch.FloatTensor(np.random.normal(loc=0.0, scale=1.0, size=self.in_size))
+        scale_in_epsilon = in_epsilon.sign().mul(in_epsilon.abs().sqrt())
+
+        # scaling factor for output noise
+        out_epsilon = torch.FloatTensor(np.random.normal(loc=0.0, scale=1.0, size=self.out_size))
+        scale_out_epsilon = out_epsilon.sign().mul(out_epsilon.abs().sqrt())
+
+        # outer product
+        self.weight_epsilon.copy_(scale_out_epsilon.ger(scale_in_epsilon))
+        self.bias_epsilon.copy_(scale_out_epsilon)
+
+    def forward(self, _input: torch.Tensor) -> torch.Tensor:
         """
             Forward function that works stochastically in training mode and deterministically in eval mode.
 
@@ -112,12 +134,8 @@ class NoisyLinear(torch.nn.Module):
                 torch.Tensor: Layer output
         """
         
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        raise NotImplementedError
+        return torch.nn.functional.linear(
+            _input,
+            self.weight_mu + self.weight_sigma * self.weight_epsilon,
+            self.bias_mu + self.bias_sigma * self.bias_epsilon,
+        )
