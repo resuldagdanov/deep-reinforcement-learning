@@ -24,14 +24,56 @@ class HeadLayer(torch.nn.Module):
     def __init__(self, in_size: int, act_size: int, extensions: Dict[str, Any], hidden_size: Optional[int] = None):
         super().__init__()
 
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
+        self.in_size = in_size
+        self.act_size = act_size
+        self.extensions = extensions
+        self.hidden_size = hidden_size
+
+        # get noise standard deviation when noise layers are active
+        if self.extensions['noisy']:
+            noisy_std = self.extensions['noisy']['init_std']
+        
+        # when distributional layers are active, multiply output with atoms
+        if self.extensions['distributional']:
+            self.act_size = self.act_size * self.extensions['distributional']['natoms']
+        
+        # dueling architecture could be with noise layers or without (leaky relu is used for activation)
+        if self.extensions['dueling']:
+
+            # when noise dqn is active, noise layers are used with noise_std instead of normal linear layer
+            if self.extensions['noisy']:
+                self.value_head = torch.nn.Sequential(
+                    NoisyLinear(self.in_size, self.hidden_size, noisy_std),
+                    torch.nn.LeakyReLU(),
+                    NoisyLinear(self.hidden_size, 1, noisy_std)
+                    )
+                self.advantage_head = torch.nn.Sequential(
+                    NoisyLinear(self.in_size, self.hidden_size, noisy_std),
+                    torch.nn.LeakyReLU(),
+                    NoisyLinear(self.hidden_size, self.act_size, noisy_std)
+                    )
+
+            else:
+                self.value_head = torch.nn.Sequential(
+                    torch.nn.Linear(self.in_size, self.hidden_size),
+                    torch.nn.LeakyReLU(),
+                    torch.nn.Linear(self.hidden_size, 1)
+                    )
+                self.advantage_head = torch.nn.Sequential(
+                    torch.nn.Linear(self.in_size, self.hidden_size),
+                    torch.nn.LeakyReLU(),
+                    torch.nn.Linear(self.hidden_size, self.act_size)
+                    )
+        
+        # without dueling architecture, only one head is used
+        else:
+
+            # noisy layers are used when noisy dqn is active
+            if self.extensions['noisy']:
+                self.head = NoisyLinear(self.in_size, self.act_size, noisy_std)
+            else:
+                self.head = torch.nn.Linear(self.in_size, self.act_size)
+
 
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         """
@@ -44,15 +86,14 @@ class HeadLayer(torch.nn.Module):
                 torch.Tensor: Q values or distributions
         """
 
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        raise NotImplementedError
+        if self.extensions['dueling']:
+            advantage_features = self.advantage_head(features)
+            
+            return self.value_head(features) + advantage_features - advantage_features.mean()
+        
+        # when dueling is not active, only one head is used
+        else:
+            return self.head(features)
 
     def reset_noise(self) -> None:
         """
