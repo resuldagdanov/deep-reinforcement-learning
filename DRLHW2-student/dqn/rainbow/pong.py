@@ -165,7 +165,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size of each update in training")
     parser.add_argument("--gamma", type=float, default=0.99, help="Discount Factor")
     parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate")
-    parser.add_argument("--device", type=str, default="cpu", help="Torch device")
+    parser.add_argument("--device", type=str, default="cuda", help="Torch device")
     parser.add_argument("--target-update-period", type=int, default=2500, help="Target network updating period")
     parser.add_argument("--buffer-capacity", type=int, default=250000, help="Replay buffer capacity")
     parser.add_argument("--epsilon-init", type=float, default=0.9, help="Initial value of the epsilon")

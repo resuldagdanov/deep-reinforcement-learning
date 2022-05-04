@@ -79,7 +79,7 @@ class Trainer(BaseTrainer):
                 
                 else:
                     # sample a transitions from the prioritized replay buffer along with weigths and indices
-                    transitions, selected_indices, weights = self.agent.buffer.sample(batch_size=self.args.batch_size, beta=self.prioritized_beta)
+                    transitions, selected_indices, weights = self.agent.buffer.sample(batch_size=self.args.batch_size, beta=self.args.beta_init)
 
                     # compute temporal-difference loss of this batch (without averaging)
                     loss = self.agent.loss(transitions, self.args.gamma)
@@ -91,7 +91,7 @@ class Trainer(BaseTrainer):
                     weights = torch.tensor(weights).to(self.args.device)
 
                     # averaging td-loss with weights
-                    avg_loss = torch.mean(td_values * weights)
+                    avg_loss = torch.mean(loss * weights)
 
                     self.agent.buffer.update_priority(indices=selected_indices, td_values=td_values)
 
@@ -99,7 +99,7 @@ class Trainer(BaseTrainer):
                 self.td_loss.append(avg_loss.item())
 
                 # backpropagate with computed loss through value network
-                loss.backward()
+                avg_loss.backward()
 
                 # clip each parameter of the value network between [-1 1] if required
                 if self.args.clip_grad:

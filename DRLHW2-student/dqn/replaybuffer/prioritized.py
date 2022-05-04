@@ -21,11 +21,19 @@ class PriorityBuffer(BaseBuffer):
         super().__init__(capacity, state_shape, state_dtype)
         
         self.abs_td_errors = np.zeros(capacity, dtype=np.float32)
+        
         self.epsilon = epsilon
         self.alpha = alpha
-        self.write_index = 0  # pointing to the next writing index
+
+        # pointing to the next writing index
+        self.write_index = 0
         self.size = 0
-        self.max_abs_td = epsilon  # Maximum = epsilon at the beginning
+
+        # maximum = epsilon at the beginning
+        self.max_abs_td = epsilon
+
+        # initialize list of priorities with zeros
+        self.priorities = np.zeros(self.capacity, dtype=np.float32)
 
     def push(self, transition: BaseBuffer.Transition) -> None:
         """
@@ -51,14 +59,14 @@ class PriorityBuffer(BaseBuffer):
         self.buffer.next_state[self.write_index] = next_state
         self.buffer.terminal[self.write_index] = terminal
 
+        # update the priority of the write_index
+        self.priorities[self.write_index] = self.max_abs_td
+
         # update the write_index
         self.write_index = (self.write_index + 1) % self.capacity
 
         # update the size of the buffer, remember that the buffer size could not exeed the capacity
         self.size = min(self.size + 1, self.capacity)
-
-        # initialize list of priorities with zeros
-        self.priorities = np.zeros((self.capacity, ), dtype=np.float32)
 
     def sample(self, batch_size: int, beta: float) -> Tuple[BaseBuffer.Transition, np.ndarray, np.ndarray]:
         """
@@ -80,16 +88,19 @@ class PriorityBuffer(BaseBuffer):
             return None
 
         # get priority values from the buffer
-        all_priorities = self.priorities[:self.write_index]
-
+        if self.size < self.capacity:
+            all_priorities = self.priorities[:self.write_index]
+        else:
+            all_priorities = self.priorities
+        
         # define probabilities
         probability_alpha = np.array(all_priorities, dtype=np.float32) ** self.alpha
         probabilities = probability_alpha / probability_alpha.sum()
 
         # sample random indices of the transitions of size batchsize and sort them
-        # note that we use the modulo operator to ensure that the indices are within the buffer size
+        # note that we use the module operator to ensure that the indices are within the buffer size
         # samples are not replaced, meaning that the value a could not be sampled twice in one batch
-        random_index = np.random.choice(a=range(self.size), size=batch_size, replace=False)
+        random_index = np.random.choice(self.size, size=batch_size, p=probabilities, replace=False)
         random_index = np.sort(random_index)
 
         # extract prioritized experience samples from the buffer of size batchsize
@@ -103,8 +114,8 @@ class PriorityBuffer(BaseBuffer):
         transition = self.Transition(current_state, action, reward, next_state, terminal)
 
         # compute importance sampling weights
-        weights = (self.size * probabilities[random_index]) ** (-beta)
-        weights /= weights.max()
+        weights_beta = (self.size * probabilities[random_index]) ** (-beta)
+        weights = weights_beta / weights_beta.max()
 
         return transition, random_index, weights
 
