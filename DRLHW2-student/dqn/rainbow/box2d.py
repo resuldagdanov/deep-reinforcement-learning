@@ -53,6 +53,10 @@ class ValueNet(torch.nn.Module):
         feature_logits = self.feature_network(state)
         value = self.head_layer(feature_logits)
 
+        if self.extensions['distributional']:
+            natoms = self.extensions['distributional']['natoms']
+            value = torch.nn.functional.softmax(value.view(-1, natoms), 1).view(-1, self.out_size, natoms)
+
         return value
 
     def reset_noise(self) -> None:

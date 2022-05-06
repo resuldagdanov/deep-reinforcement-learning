@@ -43,7 +43,10 @@ class RainBow(DQN):
 
         if self.extensions["distributional"]:
             value_dist = self.valuenet(state)
-            return self.expected_value(value_dist).argmax().item()
+            value_dist = value_dist.view(1, self.nact, -1)
+
+            values = self.expected_value(value_dist)
+            return values.sum(2).max(1)[1].detach()[0].item()
         
         else:
             return super().greedy_policy(state)
@@ -201,8 +204,11 @@ class RainBow(DQN):
         proj_dist.view(-1).index_add_(0, (offset + u).view(-1), (target_next_distribution * (b - l.float())).view(-1))
 
         # compute distributional action from the current value network
-        distribution = self.valuenet.forward(state)
+        distribution = self.valuenet(state)
+        
         action = action.unsqueeze(1).expand(batch_size, 1, n_atoms)
+        action = action.type(torch.int64)
+
         distribution = distribution.gather(1, action).squeeze(1)
         distribution.detach().clamp_(min=1e-3)
 

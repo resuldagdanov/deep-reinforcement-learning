@@ -74,7 +74,6 @@ class HeadLayer(torch.nn.Module):
             else:
                 self.head = torch.nn.Linear(self.in_size, self.act_size)
 
-
     def forward(self, features: torch.Tensor) -> torch.Tensor:
         """
             Run last layer with the given features 
