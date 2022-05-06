@@ -115,8 +115,8 @@ class Trainer(BaseTrainer):
 
                 # reset noise for value and target network
                 if not self.args.no_noisy:
-                    self.agent.valuenet.head.reset_noise()
-                    self.agent.targetnet.head.reset_noise()
+                    self.agent.valuenet.head_layer.reset_noise()
+                    self.agent.targetnet.head_layer.reset_noise()
 
     def __iter__(self) -> Generator[RainBow.Transition, None, None]:
         """
