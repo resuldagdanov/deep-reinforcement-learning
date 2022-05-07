@@ -1,15 +1,13 @@
-from typing import Generator
 import torch
 import numpy as np
-from copy import deepcopy
 import argparse
 import gym
 import os
-from tempfile import TemporaryDirectory
 import warnings
 
+from typing import Generator
+from tempfile import TemporaryDirectory
 from dqn.replaybuffer.uniform import UniformBuffer
-
 from .model import DQN
 from dqn.common import linear_annealing, exponential_annealing, PrintWriter, CSVwriter
 
@@ -74,6 +72,10 @@ class Trainer:
             self.update(iteration)
             self.writer(iteration)
 
+            # stop training when maximum step number is reached
+            if iteration == self.args.n_iterations:
+                break
+
     def evaluation(self, iteration: int) -> None:
         """
             Evaluate the agent if the index "iteration" equals to the evaluation period. 
@@ -126,11 +128,11 @@ class Trainer:
             # checking whether updating initialization starting iteration is reached
             if iteration >= self.args.start_update:
 
-                # sample a transitions from the replay buffer in size of a mini-batch
-                transitions = self.agent.buffer.sample(self.args.batch_size)
-
                 # reset an optimizer
                 self.opt.zero_grad()
+
+                # sample a transitions from the replay buffer in size of a mini-batch
+                transitions = self.agent.buffer.sample(self.args.batch_size)
 
                 # compute temporal-difference loss of this batch
                 loss = self.agent.loss(transitions, self.args.gamma)

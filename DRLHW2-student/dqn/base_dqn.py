@@ -1,10 +1,9 @@
-from typing import Tuple
 import torch
 import gym
 import numpy as np
+
 from copy import deepcopy
 from abc import ABC, abstractmethod
-
 from dqn.replaybuffer.uniform import BaseBuffer
 
 
