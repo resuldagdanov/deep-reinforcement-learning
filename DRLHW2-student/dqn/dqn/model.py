@@ -60,7 +60,7 @@ class DQN(BaseDQN):
         value_next_state, _ = torch.max(self.targetnet(next_state).to(device), dim=1)
 
         # compute Bellman expectation
-        expected_value_state = reward +  (value_next_state * gamma)
+        expected_value_state = reward + (value_next_state * gamma * (1 - terminal.view(batch_size)))
 
         # calculate loss between expected value and current value of the state
         loss_function = torch.nn.MSELoss(reduction='mean')

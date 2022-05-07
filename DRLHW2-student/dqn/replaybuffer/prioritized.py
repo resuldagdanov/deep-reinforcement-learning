@@ -19,9 +19,8 @@ class PriorityBuffer(BaseBuffer):
 
     def __init__(self, capacity: int, state_shape: Tuple[int], state_dtype: np.dtype, alpha: float, epsilon: float = 0.1):
         super().__init__(capacity, state_shape, state_dtype)
-        
-        self.abs_td_errors = np.zeros(capacity, dtype=np.float32)
-        
+
+        self.capacity = capacity
         self.epsilon = epsilon
         self.alpha = alpha
 
@@ -33,7 +32,7 @@ class PriorityBuffer(BaseBuffer):
         self.max_abs_td = epsilon
 
         # initialize list of priorities with zeros
-        self.priorities = np.zeros(self.capacity, dtype=np.float32)
+        self.abs_td_errors = np.zeros((capacity,), dtype=np.float32) + 1e-5
 
     def push(self, transition: BaseBuffer.Transition) -> None:
         """
@@ -60,7 +59,7 @@ class PriorityBuffer(BaseBuffer):
         self.buffer.terminal[self.write_index] = terminal
 
         # update the priority of the write_index
-        self.priorities[self.write_index] = self.max_abs_td
+        self.abs_td_errors[self.write_index] = self.max_abs_td if self.buffer else 1.0
 
         # update the write_index
         self.write_index = (self.write_index + 1) % self.capacity
@@ -89,9 +88,9 @@ class PriorityBuffer(BaseBuffer):
 
         # get priority values from the buffer
         if self.size < self.capacity:
-            all_priorities = self.priorities[:self.write_index]
+            all_priorities = self.abs_td_errors[:self.write_index]
         else:
-            all_priorities = self.priorities
+            all_priorities = self.abs_td_errors
         
         # define probabilities
         probability_alpha = np.array(all_priorities, dtype=np.float32) ** self.alpha
@@ -129,12 +128,9 @@ class PriorityBuffer(BaseBuffer):
                 td_values (np.ndarray): New td values
         """
         
-        # priority is defined as (temporal-difference value)^(max_abs_td)
-        # self.priorities = np.power(np.array(td_values) + self.epsilon, self.max_abs_td)
-
         # update with higher absolute td
         self.max_abs_td = max(td_values)
 
         # update priority of each index sample
         for index, value in zip(indices, td_values):
-            self.priorities[index] = (value + self.epsilon) ** self.alpha
+            self.abs_td_errors[index] = value

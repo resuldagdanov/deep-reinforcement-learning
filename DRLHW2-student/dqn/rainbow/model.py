@@ -96,20 +96,17 @@ class RainBow(DQN):
         reward = torch.Tensor(batch.reward).to(device).view(batch_size)
         terminal = torch.Tensor(batch.terminal).float().to(device)
 
-        multi_terminal = 1 - terminal.clone().view(batch_size)
-
         # determine which target or value network to use
         next_state_action = self._next_action_network(next_state).argmax(dim=1, keepdim=True)
 
         # target network (comes from BaseDQN class) is used to find the values of the next-states
         value_next_state = self.targetnet(next_state).gather(1, next_state_action).view(-1)
-        value_next_state = value_next_state * multi_terminal
 
         # compute Bellman expectation
-        expected_value_state = (value_next_state * gamma) + reward
+        expected_value_state = reward + (value_next_state * gamma * (1 - terminal.view(batch_size)))
 
         # get action state value from current value network
-        value_state = self.valuenet(state).gather(1, action[:, 0].view(-1,1).long()).view(-1)
+        value_state = self.valuenet(state).gather(1, action[:, 0].view(-1, 1).long()).view(-1)
 
         # calculate loss between expected value and current value of the state
         loss_function = torch.nn.SmoothL1Loss(reduction="none")

@@ -34,11 +34,11 @@ class Trainer(BaseTrainer):
         super().__init__(args, agent, opt, env)
 
         # beta = 1 - prioritized_beta
-        self.prioritized_beta = linear_annealing(
-            init_value=1 - args.beta_init,
-            min_value=0,
-            decay_range=args.n_iterations
-        )
+        # self.prioritized_beta = linear_annealing(
+        #     init_value=1 - args.beta_init,
+        #     min_value=0,
+        #     decay_range=args.n_iterations
+        # )
 
     def update(self, iteration: int) -> None:
         """
@@ -87,7 +87,7 @@ class Trainer(BaseTrainer):
                     # filter out negative td-losses
                     loss[loss < 0.0] = 0.0
 
-                    td_values = loss.detach().cpu().numpy()
+                    td_values = loss.detach().cpu().numpy() + 1e-5
                     weights = torch.tensor(weights).to(self.args.device)
 
                     # averaging td-loss with weights
@@ -129,9 +129,6 @@ class Trainer(BaseTrainer):
         # initialize total reward for this episode
         episode_reward = 0.0
 
-        # initialize cumulative reward computed with discount factor
-        cumulative_reward = 0.0
-
         # horizon for each episode
         n_steps = self.args.n_steps
 
@@ -141,6 +138,9 @@ class Trainer(BaseTrainer):
         # loop over steps in episode
         done = False
         while not done:
+
+            # initialize cumulative reward computed with discount factor
+            cumulative_reward = 0.0
 
             # store current state for yielding in transition
             yielding_state = self.state
@@ -162,17 +162,17 @@ class Trainer(BaseTrainer):
                 # step in the environment with this epsilon-greedy action
                 next_state, reward, done, _ = self.env.step(action)
 
-                # termination state
-                yielding_done = done
-
                 # accumulate reward
                 episode_reward += reward
 
                 # cumulative reward for the next states
-                cumulative_reward += reward * self.args.gamma ** (step + 1)
+                cumulative_reward += reward * (self.args.gamma ** (step + 1))
 
                 # termination
                 if done:
+                    # termination state
+                    yielding_done = True
+
                     # get updated epsilon
                     self.epsilon_value = next(self.epsilon)
 
@@ -187,6 +187,9 @@ class Trainer(BaseTrainer):
             
                 # continue with next transition steps if not terminated
                 else:
+                    # termination state
+                    yielding_done = False
+
                     self.state = next_state
 
             yield self.agent.Transition(yielding_state, yielding_action, cumulative_reward, next_state, yielding_done)

@@ -120,9 +120,9 @@ def main(args: argparse.Namespace) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Rainbow')
     parser.add_argument("--envname", type=str, default="LunarLander-v2", help="Name of the environment")
-    parser.add_argument("--n-iterations", type=int, default=40000, help="Number of training iterations")
+    parser.add_argument("--n-iterations", type=int, default=300_000, help="Number of training iterations")
     parser.add_argument("--start-update", type=int, default=100, help="Number of iterations until starting to update")
-    parser.add_argument("--max-episode-len", type=int, default=300, help="Maximum length of an episode before termination")
+    parser.add_argument("--max-episode-len", type=int, default=1000, help="Maximum length of an episode before termination")
 
     # ----------------------- Hyperparameters -----------------------
     parser.add_argument("--batch-size", type=int, default=64, help="Batch size of each update in training")
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument("--model-dir", type=str, default="models/", help="Directory to save models")
     parser.add_argument("--write-period", type=int, default=100, help="Writer period")
     parser.add_argument("--log_dir", type=str, default=None, help="Logging directory. Default: /tmp")
-    parser.add_argument("--render", action="store_false", help="Render evaluations")
+    parser.add_argument("--render", action="store_false", default=False, help="Render evaluations")
     parser.add_argument("--seed", type=int, default=None, help="Seed value. Default: Random seed")
 
     args = parser.parse_args()
