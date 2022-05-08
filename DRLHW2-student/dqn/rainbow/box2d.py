@@ -120,20 +120,20 @@ def main(args: argparse.Namespace) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Rainbow')
     parser.add_argument("--envname", type=str, default="LunarLander-v2", help="Name of the environment")
-    parser.add_argument("--n-iterations", type=int, default=300_000, help="Number of training iterations")
+    parser.add_argument("--n-iterations", type=int, default=60_000, help="Number of distributionaltraining iterations")
     parser.add_argument("--start-update", type=int, default=100, help="Number of iterations until starting to update")
     parser.add_argument("--max-episode-len", type=int, default=1000, help="Maximum length of an episode before termination")
 
     # ----------------------- Hyperparameters -----------------------
-    parser.add_argument("--batch-size", type=int, default=64, help="Batch size of each update in training")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size of each update in training")
     parser.add_argument("--gamma", type=float, default=0.99, help="Discount Factor")
-    parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
+    parser.add_argument("--lr", type=float, default=0.0003, help="Learning rate")
     parser.add_argument("--device", type=str, default="cuda", help="Torch device")
-    parser.add_argument("--target-update-period", type=int, default=300, help="Target network updating period")
-    parser.add_argument("--buffer-capacity", type=int, default=10000, help="Replay buffer capacity")
-    parser.add_argument("--epsilon-init", type=float, default=0.9, help="Initial value of the epsilon")
-    parser.add_argument("--epsilon-min", type=float, default=0.1,  help="Minimum value of the epsilon")
-    parser.add_argument("--epsilon-decay", type=float, default=None, help="Epsilon decay rate for exponential decaying")
+    parser.add_argument("--target-update-period", type=int, default=500, help="Target network updating period")
+    parser.add_argument("--buffer-capacity", type=int, default=50000, help="Replay buffer capacity")
+    parser.add_argument("--epsilon-init", type=float, default=0.99, help="Initial value of the epsilon")
+    parser.add_argument("--epsilon-min", type=float, default=0.01,  help="Minimum value of the epsilon")
+    parser.add_argument("--epsilon-decay", type=float, default=0.99, help="Epsilon decay rate for exponential decaying")
     parser.add_argument("--epsilon-range", type=int, default=None, help="Epsilon decaying range for linear decay")
     parser.add_argument("--clip-grad", action="store_true", help="Gradient Clip between -1 and 1. Default: No")
 

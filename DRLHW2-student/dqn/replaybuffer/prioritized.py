@@ -32,7 +32,7 @@ class PriorityBuffer(BaseBuffer):
         self.max_abs_td = epsilon
 
         # initialize list of priorities with zeros
-        self.abs_td_errors = np.zeros((capacity,), dtype=np.float32) + 1e-5
+        self.abs_td_errors = np.zeros((capacity,), dtype=np.float32) + 1e-6
 
     def push(self, transition: BaseBuffer.Transition) -> None:
         """
@@ -59,7 +59,8 @@ class PriorityBuffer(BaseBuffer):
         self.buffer.terminal[self.write_index] = terminal
 
         # update the priority of the write_index
-        self.abs_td_errors[self.write_index] = self.max_abs_td if self.buffer else 1.0
+        max_priority = self.abs_td_errors.max() if self.buffer else 1.0
+        self.abs_td_errors[self.write_index] = max_priority
 
         # update the write_index
         self.write_index = (self.write_index + 1) % self.capacity
@@ -129,7 +130,7 @@ class PriorityBuffer(BaseBuffer):
         """
         
         # update with higher absolute td
-        self.max_abs_td = max(td_values)
+        self.max_abs_td = max(abs(td_values))
 
         # update priority of each index sample
         for index, value in zip(indices, td_values):

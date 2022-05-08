@@ -201,7 +201,7 @@ class RainBow(DQN):
         proj_dist.view(-1).index_add_(0, (offset + u).view(-1), (target_next_distribution * (b - l.float())).view(-1))
 
         # compute distributional action from the current value network
-        distribution = self.valuenet(state)
+        distribution = self.valuenet.forward(state)
         
         action = action.unsqueeze(1).expand(batch_size, 1, n_atoms)
         action = action.type(torch.int64)
@@ -210,7 +210,7 @@ class RainBow(DQN):
         distribution.detach().clamp_(min=1e-3)
 
         # compute distributional loss
-        loss = - (proj_dist * distribution.log()).sum(1)
+        loss = -(proj_dist * distribution.log()).sum(1)
 
         return loss
 

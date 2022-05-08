@@ -158,20 +158,20 @@ def main(args: argparse.Namespace) -> None:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Rainbow')
-    parser.add_argument("--n-iterations", type=int, default=1500000, help="Number of training iterations")
-    parser.add_argument("--start-update", type=int, default=25000, help="Number of iterations until starting to update")
+    parser.add_argument("--n-iterations", type=int, default=10_000_000, help="Number of training iterations")
+    parser.add_argument("--start-update", type=int, default=25_000, help="Number of iterations until starting to update")
 
     # ----------------------- Hyperparameters -----------------------
     parser.add_argument("--batch-size", type=int, default=32, help="Batch size of each update in training")
     parser.add_argument("--gamma", type=float, default=0.99, help="Discount Factor")
     parser.add_argument("--lr", type=float, default=0.0001, help="Learning rate")
     parser.add_argument("--device", type=str, default="cuda", help="Torch device")
-    parser.add_argument("--target-update-period", type=int, default=2500, help="Target network updating period")
-    parser.add_argument("--buffer-capacity", type=int, default=250000, help="Replay buffer capacity")
+    parser.add_argument("--target-update-period", type=int, default=2_500, help="Target network updating period")
+    parser.add_argument("--buffer-capacity", type=int, default=250_000, help="Replay buffer capacity")
     parser.add_argument("--epsilon-init", type=float, default=0.9, help="Initial value of the epsilon")
     parser.add_argument("--epsilon-min", type=float, default=0.1, help="Minimum value of the epsilon")
-    parser.add_argument("--epsilon-decay", type=float, default=None, help="Epsilon decay rate for exponential decaying")
-    parser.add_argument("--epsilon-range", type=int, default=750000, help="Epsilon decaying range for linear decay")
+    parser.add_argument("--epsilon-decay", type=float, default=0.9998, help="Epsilon decay rate for exponential decaying")
+    parser.add_argument("--epsilon-range", type=int, default=750_000, help="Epsilon decaying range for linear decay")
     parser.add_argument("--clip-grad", action="store_true", help="Gradient Clip between -1 and 1. Default: No")
 
     # ----------------------- Extensions -----------------------
@@ -189,11 +189,11 @@ if __name__ == "__main__":
     parser.add_argument("--natoms", type=int, default=51, help="Number of atoms in distributional DQN extension")
 
     # ----------------------- Miscelenious -----------------------
-    parser.add_argument("--eval-period", type=int, default=25000, help="Evaluation period in terms of iteration")
+    parser.add_argument("--eval-period", type=int, default=25_000, help="Evaluation period in terms of iteration")
     parser.add_argument("--eval-episode", type=int, default=3, help="Number of episodes to evaluate")
     parser.add_argument("--save-model", action="store_true", default=True, help="If given most successful models so far will be saved")
     parser.add_argument("--model-dir", type=str, default="models/", help="Directory to save models")
-    parser.add_argument("--write-period", type=int, default=2500, help="Writer period")
+    parser.add_argument("--write-period", type=int, default=2_500, help="Writer period")
     parser.add_argument("--log_dir", type=str, default=None, help="Logging directory. Default: /tmp")
     parser.add_argument("--render", action="store_false", default=False, help="Render evaluations")
     parser.add_argument("--seed", type=int, default=None, help="Seed value. Default: Random seed")

@@ -87,13 +87,15 @@ class Trainer(BaseTrainer):
                     # filter out negative td-losses
                     loss[loss < 0.0] = 0.0
 
-                    td_values = loss.detach().cpu().numpy() + 1e-5
                     weights = torch.tensor(weights).to(self.args.device)
+                    loss = loss * weights
+
+                    td_values = loss + 1e-6
 
                     # averaging td-loss with weights
-                    avg_loss = torch.mean(loss * weights)
+                    avg_loss = torch.mean(loss)
 
-                    self.agent.buffer.update_priority(indices=selected_indices, td_values=td_values)
+                    self.agent.buffer.update_priority(indices=selected_indices, td_values=td_values.detach().cpu().numpy())
 
                 # keeping track of the mean td-loss
                 self.td_loss.append(avg_loss.item())
@@ -168,11 +170,11 @@ class Trainer(BaseTrainer):
                 # cumulative reward for the next states
                 cumulative_reward += reward * (self.args.gamma ** (step + 1))
 
+                # termination state
+                yielding_done = done
+
                 # termination
                 if done:
-                    # termination state
-                    yielding_done = True
-
                     # get updated epsilon
                     self.epsilon_value = next(self.epsilon)
 
@@ -187,9 +189,6 @@ class Trainer(BaseTrainer):
             
                 # continue with next transition steps if not terminated
                 else:
-                    # termination state
-                    yielding_done = False
-
                     self.state = next_state
 
             yield self.agent.Transition(yielding_state, yielding_action, cumulative_reward, next_state, yielding_done)
