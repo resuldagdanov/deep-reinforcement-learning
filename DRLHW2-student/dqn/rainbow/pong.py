@@ -72,7 +72,7 @@ class ValueNet(torch.nn.Module):
         conv_features = self.convolutional_embedding(state)
 
         # forward to linear layer
-        linear_features = self.linear(conv_features.reshape(conv_features.shape[0], -1))
+        linear_features = self.linear_layer(conv_features.reshape(conv_features.shape[0], -1))
 
         # pass through head layer
         value = self.head_layer(linear_features)
@@ -191,11 +191,11 @@ if __name__ == "__main__":
     # ----------------------- Miscelenious -----------------------
     parser.add_argument("--eval-period", type=int, default=25000, help="Evaluation period in terms of iteration")
     parser.add_argument("--eval-episode", type=int, default=3, help="Number of episodes to evaluate")
-    parser.add_argument("--save-model", action="store_true", help="If given most successful models so far will be saved")
+    parser.add_argument("--save-model", action="store_true", default=True, help="If given most successful models so far will be saved")
     parser.add_argument("--model-dir", type=str, default="models/", help="Directory to save models")
     parser.add_argument("--write-period", type=int, default=2500, help="Writer period")
     parser.add_argument("--log_dir", type=str, default=None, help="Logging directory. Default: /tmp")
-    parser.add_argument("--render", action="store_false", help="Render evaluations")
+    parser.add_argument("--render", action="store_false", default=False, help="Render evaluations")
     parser.add_argument("--seed", type=int, default=None, help="Seed value. Default: Random seed")
 
     args = parser.parse_args()
