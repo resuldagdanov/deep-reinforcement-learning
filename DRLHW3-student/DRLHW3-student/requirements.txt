@@ -1,0 +1,9 @@
+torch == 1.11.0
+numpy == 1.21.5
+box2d-py
+gym[atari, box2d, accept-rom-license] == 0.23.1
+plotly
+ipykernel
+pandas
+ipywidgets
+cloudpickle
