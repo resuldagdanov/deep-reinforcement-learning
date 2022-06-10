@@ -1,4 +1,4 @@
-max=5
+max=2
 for i in `seq 1 $max`
 do
     python dqn/dqn/box2d.py --log_dir logs/vanilla-dqn-exp1 --target-update-period 50 --buffer-capacity 10000
