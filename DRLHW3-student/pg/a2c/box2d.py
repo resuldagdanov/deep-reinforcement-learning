@@ -9,16 +9,18 @@ from pg.a2c.vecenv import ParallelEnv
 
 
 class GruNet(torch.nn.Module):
-    """ Gru network that combines value and policy functions.
+    """
+        Gru network that combines value and policy functions.
 
-    Args:
-        in_size (int): Input size (length of the state vector)
-        out_size (int): Action size (number of categories)
-        hidden (int, optional): Hidden neuron size. Defaults to 128.
+        Args:
+            in_size (int): Input size (length of the state vector)
+            out_size (int): Action size (number of categories)
+            hidden (int, optional): Hidden neuron size. Defaults to 128.
     """
 
     def __init__(self, in_size: int, out_size: int, hidden: int = 128):
         super().__init__()
+
         #  /$$$$$$$$ /$$$$$$ /$$       /$$
         # | $$_____/|_  $$_/| $$      | $$
         # | $$        | $$  | $$      | $$
@@ -29,20 +31,18 @@ class GruNet(torch.nn.Module):
         # |__/      |______/|________/|________/
         raise NotImplementedError
 
-    def forward(self,
-                state: torch.Tensor,
-                gru_hx: torch.Tensor
-                ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """ Return policy logits, value, and the gru hidden state for the given state
-
-        Args:
-            state (torch.Tensor): State tensor
-            gru_hx (torch.Tensor): gru hidden state
-
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-                policy logits, value, and gru hidden state
+    def forward(self, state: torch.Tensor, gru_hx: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
+            Return policy logits, value, and the gru hidden state for the given state
+
+            Args:
+                state (torch.Tensor): State tensor
+                gru_hx (torch.Tensor): gru hidden state
+
+            Returns:
+                Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: policy logits, value, and gru hidden state
+        """
+
         #  /$$$$$$$$ /$$$$$$ /$$       /$$
         # | $$_____/|_  $$_/| $$      | $$
         # | $$        | $$  | $$      | $$
@@ -56,25 +56,30 @@ class GruNet(torch.nn.Module):
 
 
 def make_env(envname: str) -> gym.Env:
-    """ Environment creating function """
+    """
+        Environment creating function
+    """
+
     return gym.make(envname)
 
 
 def main(args):
-    """ Start the learning process with the given arguments """
+    """
+        Start the learning process with the given arguments
+    """
+
     seed = args.seed or np.random.randint(2**10, 2**30)
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    vecenv = ParallelEnv(args.nenv,
-                         lambda: make_env(args.envname),
-                         seed=seed)
+    vecenv = ParallelEnv(args.nenv, lambda: make_env(args.envname), seed=seed)
 
-    # We need to initialize an environment to get the dimensions
+    # we need to initialize an environment to get the dimensions
     env = make_env(args.envname)
     in_size = env.observation_space.shape[0]
     out_size = env.action_space.n
-    # We no longer need to keep this environment
+    
+    # we no longer need to keep this environment
     del env
 
     network = GruNet(in_size, out_size, args.hidden_size)
@@ -90,48 +95,21 @@ def main(args):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="A2C with Box2d")
-    parser.add_argument("--envname", type=str,
-                        default="LunarLander-v2",
-                        help="Name of the environment")
-    parser.add_argument("--nenv", type=int,
-                        help="Number of environemnts run in parallel",
-                        default=16)
-    parser.add_argument("--seed", type=int, default=None,
-                        help="Seed of the experiment")
-    parser.add_argument("--lr", type=float, help="Learning rate",
-                        default=3e-4)
-    parser.add_argument("--device", type=str, help="Torch device",
-                        default="cpu")
-    parser.add_argument("--timesteps", type=int,
-                        help="Number of timesteps to run learning",
-                        default=int(2e6))
-    parser.add_argument("--n-step", type=int,
-                        help="Length of the rollout",
-                        default=5)
-    parser.add_argument("--hidden-size", type=int,
-                        help="Number of neurons in the hidden layers and gru",
-                        default=128)
-    parser.add_argument("--gamma", type=float,
-                        help="Discount factor",
-                        default=0.995)
-    parser.add_argument("--gae_lambda", type=float,
-                        help="lambda coefficient",
-                        default=1.0)
-    parser.add_argument("--entropy_coef", type=float,
-                        help="Entropy coefficient",
-                        default=0.1)
-    parser.add_argument("--value_coef", type=float,
-                        help="Value coefficient",
-                        default=0.5)
-    parser.add_argument("--write-period", type=int,
-                        help="Logging period (in terms of timesteps)",
-                        default=16 * 5 * 100)
-    parser.add_argument("--log-window-length", type=int,
-                        help="Last n episodic rewards to log",
-                        default=50)
-    parser.add_argument("--log-dir", type=str,
-                        help="Logging directory",
-                        default=None)
-    args = parser.parse_args()
+    parser.add_argument("--envname", type=str, default="LunarLander-v2", help="Name of the environment")
+    parser.add_argument("--nenv", type=int, help="Number of environemnts run in parallel", default=16)
+    parser.add_argument("--seed", type=int, default=None, help="Seed of the experiment")
+    parser.add_argument("--lr", type=float, help="Learning rate", default=3e-4)
+    parser.add_argument("--device", type=str, help="Torch device", default="cpu")
+    parser.add_argument("--timesteps", type=int, help="Number of timesteps to run learning", default=int(2e6))
+    parser.add_argument("--n-step", type=int, help="Length of the rollout", default=5)
+    parser.add_argument("--hidden-size", type=int, help="Number of neurons in the hidden layers and gru", default=128)
+    parser.add_argument("--gamma", type=float, help="Discount factor", default=0.995)
+    parser.add_argument("--gae_lambda", type=float, help="lambda coefficient", default=1.0)
+    parser.add_argument("--entropy_coef", type=float, help="Entropy coefficient", default=0.1)
+    parser.add_argument("--value_coef", type=float, help="Value coefficient", default=0.5)
+    parser.add_argument("--write-period", type=int, help="Logging period (in terms of timesteps)", default=16 * 5 * 100)
+    parser.add_argument("--log-window-length", type=int, help="Last n episodic rewards to log", default=50)
+    parser.add_argument("--log-dir", type=str, help="Logging directory", default=None)
 
+    args = parser.parse_args()
     main(args)

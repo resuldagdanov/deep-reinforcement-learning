@@ -1,6 +1,7 @@
-""" Loggers and Atari Wrappers
-    You don't need to modify this section.
 """
+    Loggers and Atari Wrappers. You don't need to modify this section.
+"""
+
 from typing import Dict, Tuple, Any
 import gym
 import numpy as np
@@ -11,7 +12,9 @@ import tempfile
 
 
 class PrintWriter():
-    """ Simple console writer """
+    """
+        Simple console writer
+    """
 
     def __init__(self, end_line: str = "\n", flush: bool = False):
         self.end_line = end_line
@@ -26,7 +29,9 @@ class PrintWriter():
 
 
 class CSVwriter():
-    """ CSV writer for logging and plotting """
+    """
+        CSV writer for logging and plotting
+    """
 
     def __init__(self, log_dir: str):
         if log_dir is None:
@@ -41,20 +46,22 @@ class CSVwriter():
         print("Logging at: {}".format(log_dir))
 
     def __call__(self, field_dict: Dict[str, float]) -> None:
-        # Lazy initialization
+        # lazy initialization
         if self.field_keys is None:
             self.field_keys = list(field_dict.keys())
             with open(self.log_path, "a") as fobj:
                 writer = csv.DictWriter(fobj, fieldnames=self.field_keys)
                 writer.writeheader()
+        
         with open(self.log_path, "a") as fobj:
             writer = csv.DictWriter(fobj, fieldnames=self.field_keys)
             writer.writerow(field_dict)
 
 
 class ResizeAndScalePong(gym.ObservationWrapper):
-    """ Observation wrapper that is designed for Pong by Andrej Karphaty.
-    Crop, rescale, transpose and simplify the state.
+    """
+        Observation wrapper that is designed for Pong by Andrej Karphaty.
+        Crop, rescale, transpose and simplify the state.
     """
 
     def __init__(self, env: gym.Env):
@@ -62,7 +69,7 @@ class ResizeAndScalePong(gym.ObservationWrapper):
         self.observation_space = gym.spaces.Box(
             low=0, high=255, shape=(1, 80, 80), dtype=np.int8)
 
-    # From Andrew Karphaty
+    # from Andrew Karphaty
     def observation(self, obs: np.ndarray) -> np.ndarray:
         obs = obs[35:195]  # crop
         obs = obs[::2, ::2, 0:1]  # downsample by factor of 2
@@ -76,8 +83,9 @@ class ResizeAndScalePong(gym.ObservationWrapper):
 
 
 class DerivativeEnv(gym.Wrapper):
-    """ Environment wrapper that returns the difference between two consecutive
-    observations """
+    """
+        Environment wrapper that returns the difference between two consecutive observations
+    """
 
     def reset(self, **kwargs):
         self.pre_obs = self.env.reset(**kwargs)
@@ -91,12 +99,15 @@ class DerivativeEnv(gym.Wrapper):
         return (obs, *remaining)
 
 
-# From Open AI Baseline
+# from Open AI Baseline
 class NoopResetEnv(gym.Wrapper):
+
     def __init__(self, env: gym.Env, noop_max: int = 30, override_num_noops: bool = None):
-        """ Sample initial states by taking random number of no-ops on reset.
-        No-op is assumed to be action 0.
         """
+            Sample initial states by taking random number of no-ops on reset.
+            No-op is assumed to be action 0.
+        """
+
         gym.Wrapper.__init__(self, env)
         self.noop_max = noop_max
         self.override_num_noops = override_num_noops
@@ -104,7 +115,10 @@ class NoopResetEnv(gym.Wrapper):
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
 
     def reset(self, **kwargs) -> np.ndarray:
-        """ Do no-op action for a number of steps in [1, noop_max]."""
+        """
+            Do no-op action for a number of steps in [1, noop_max].
+        """
+        
         self.env.reset(**kwargs)
         if self.override_num_noops is not None:
             noops = self.override_num_noops
@@ -124,8 +138,10 @@ class NoopResetEnv(gym.Wrapper):
 
 
 class DoubleActionPong(gym.Wrapper):
-    """ Pong specific environment wrapper that reduces the action space into
-    2 with only meaningful actions (up and down) """
+    """
+        Pong specific environment wrapper that reduces the action space into
+        2 with only meaningful actions (up and down)
+    """
 
     def __init__(self, env: gym.Env):
         gym.Wrapper.__init__(self, env)

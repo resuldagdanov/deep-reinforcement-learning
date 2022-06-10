@@ -1,4 +1,5 @@
-""" Run multiple environments in parallel.
+""" 
+    Run multiple environments in parallel.
 
     Wrap your environment with ParallelEnv to run them in parallel. A wrapped
     parallel environment provides step and reset functions. After an initial
@@ -8,19 +9,21 @@
     of this wrapper must be AWARE of the fact that if termination occurs
     next state becomes the initial observation of the new episode.
 """
+
 from typing import Callable, Tuple, Dict, Any
 from collections import namedtuple
+from torch.multiprocessing import Process, Pipe
 import cloudpickle
 import numpy as np
-from torch.multiprocessing import Process, Pipe
 import gym
 
 
 class CloudpickleWrapper:
-    """ Function wrapper
+    """
+        Function wrapper
 
-    Args:
-        function (Any): function to wrap
+        Args:
+            function (Any): function to wrap
     """
 
     def __init__(self, function: Callable):
@@ -34,7 +37,8 @@ class CloudpickleWrapper:
 
 
 class ParallelEnv():
-    """ Synchronized multiple environments wrapper.
+    """ 
+        Synchronized multiple environments wrapper.
 
         Workers communicate through pipes where each worker runs a single
         environment. Initiation is started by calling <start> method. After
@@ -59,6 +63,7 @@ class ParallelEnv():
 
     def __init__(self, n_envs: int, env_maker_fn: Callable, seed=None):
         self.seed = seed or np.random.randint(2**10, 2**30)
+        
         env = env_maker_fn()
         self.action_space = env.action_space
         self.env_maker_fn = env_maker_fn
@@ -73,13 +78,13 @@ class ParallelEnv():
 
     def reset(self) -> np.ndarray:
         """ 
-        Initiate the worker processes and return all the initial states.
+            Initiate the worker processes and return all the initial states.
 
-        Raises:
-            RuntimeError: If called twice without <close>
+            Raises:
+                RuntimeError: If called twice without <close>
 
-        Returns:
-            np.ndarray: The first observations stacked as numpy array
+            Returns:
+                np.ndarray: The first observations stacked as numpy array
         """
 
         if self.started is True:
@@ -103,30 +108,30 @@ class ParallelEnv():
         self.started = True
         return state
 
-    def step(self,
-             actions: np.ndarray
-             ) -> Tuple[np.ndarray, float, bool, Dict[Any, Any]]:
-        """ Steps all the workers(environments) and return stacked
-        observations, rewards, and termination arrays. When a termination
-        happens in one of the workers, it returns the first observation of the
-        restarted environment instead of returning the next-state of the
-        terminated episode.
-
-        Args:
-            actions (np.ndarray): Action array for all the parallel environments.
-                Shape: [B, a] where a denotes number of actions (1 if Discrete) and
-                B denotes the batch size or the number of environments.
-
-        Raises:
-            RuntimeError: If called before start
-            ValueError: If argument <actions> is not a 2D array
-            ValueError: If the batch dimension of the array <actions> is not equal
-                to the number of parallel environments
-
-        Returns:
-            Tuple[np.ndarray, float, bool, Dict[Any, Any]]: Stacked arrays of 
-                next_state, rewards, terminations and infos 
+    def step(self, actions: np.ndarray) -> Tuple[np.ndarray, float, bool, Dict[Any, Any]]:
         """
+            Steps all the workers(environments) and return stacked
+            observations, rewards, and termination arrays. When a termination
+            happens in one of the workers, it returns the first observation of the
+            restarted environment instead of returning the next-state of the
+            terminated episode.
+
+            Args:
+                actions (np.ndarray): Action array for all the parallel environments.
+                    Shape: [B, a] where a denotes number of actions (1 if Discrete) and
+                    B denotes the batch size or the number of environments.
+
+            Raises:
+                RuntimeError: If called before start
+                ValueError: If argument <actions> is not a 2D array
+                ValueError: If the batch dimension of the array <actions> is not equal
+                    to the number of parallel environments
+
+            Returns:
+                Tuple[np.ndarray, float, bool, Dict[Any, Any]]: Stacked arrays of 
+                    next_state, rewards, terminations and infos 
+        """
+
         if self.started is False:
             raise RuntimeError("call <start> function first!")
         if len(actions.shape) != 2:
@@ -147,12 +152,13 @@ class ParallelEnv():
                 self.episodic_rewards.append(self.env_rewards[index])
                 self.env_rewards[index] = 0
 
-        return (state,
-                reward.reshape(-1, 1).astype(np.float32),
-                done.reshape(-1, 1).astype(np.float32))
+        return (state, reward.reshape(-1, 1).astype(np.float32), done.reshape(-1, 1).astype(np.float32))
 
     def close(self) -> None:
-        """ Terminate and join all the workers. """
+        """
+            Terminate and join all the workers
+        """
+
         for process, remote in self.env_processes:
             remote.send("end")
             process.terminate()
@@ -160,30 +166,33 @@ class ParallelEnv():
         self.started = False
 
     @staticmethod
-    def worker(remote: Pipe,
-               env_maker_fn: CloudpickleWrapper
-               ) -> None:
-        """ Start when the initial start signal is received from <reset>
-        call. Following the start signal, the first observation array is
-        sent through the pipe. Then, the worker waits for the action from the
-        pipe. If the action is "end" string, then break the loop and terminate.
-        Otherwise, the worker steps the environment and sends (state, reward,
-        done) array triplet.
-
-        Args:
-            remote (Pipe):  Child pipe (for the worker)
-            env_maker_fn (Callable): Function that returns the env object
+    def worker(remote: Pipe, env_maker_fn: CloudpickleWrapper) -> None:
         """
+            Start when the initial start signal is received from <reset>
+            call. Following the start signal, the first observation array is
+            sent through the pipe. Then, the worker waits for the action from the
+            pipe. If the action is "end" string, then break the loop and terminate.
+            Otherwise, the worker steps the environment and sends (state, reward,
+            done) array triplet.
+
+            Args:
+                remote (Pipe):  Child pipe (for the worker)
+                env_maker_fn (Callable): Function that returns the env object
+        """
+
         env = env_maker_fn.function()
         state = env.reset()
-        # Wait for the start command
+
+        # wait for the start command
         remote.recv()
         remote.send(state)
+        
         while True:
             action = remote.recv()
             if isinstance(action, str) and action == "end":
                 break
             state, reward, done, info = env.step(action)
+
             if done:
                 state = env.reset()
             remote.send((state, reward, done))
