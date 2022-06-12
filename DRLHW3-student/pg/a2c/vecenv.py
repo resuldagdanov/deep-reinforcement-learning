@@ -73,7 +73,7 @@ class ParallelEnv():
     @staticmethod
     def add_seed_wrapper(env_maker_fn, seed):
         env = env_maker_fn()
-        env.seed(seed)
+        #env.seed(seed)
         return env
 
     def reset(self) -> np.ndarray:
@@ -96,8 +96,7 @@ class ParallelEnv():
         env_processes = []
         for rank, (p_r, w_r) in enumerate((Pipe() for _ in range(self.n_envs))):
             process = Process(target=self.worker,
-                              args=(w_r,
-                                    CloudpickleWrapper(lambda: self.add_seed_wrapper(self.env_maker_fn, self.seed + rank))),
+                              args=(w_r, CloudpickleWrapper(lambda: self.add_seed_wrapper(self.env_maker_fn, self.seed + rank))),
                               daemon=True)
             env_processes.append(self.EnvProcess(process, p_r))
             process.start()

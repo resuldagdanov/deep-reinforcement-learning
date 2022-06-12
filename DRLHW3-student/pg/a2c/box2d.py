@@ -20,16 +20,20 @@ class GruNet(torch.nn.Module):
 
     def __init__(self, in_size: int, out_size: int, hidden: int = 128):
         super().__init__()
-
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        raise NotImplementedError
+        n_layers = 1
+        
+        self.gru = torch.nn.GRU(input_size=in_size, hidden_size=hidden, num_layers=n_layers, batch_first=True)
+        
+        self.policy_net = torch.nn.Sequential(
+            torch.nn.Linear(hidden, hidden),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden, out_size)
+        )
+        self.value_net = torch.nn.Sequential(
+            torch.nn.Linear(hidden, hidden),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden, 1)
+        )
 
     def forward(self, state: torch.Tensor, gru_hx: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -43,16 +47,12 @@ class GruNet(torch.nn.Module):
                 Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: policy logits, value, and gru hidden state
         """
 
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        raise NotImplementedError        
-        return logits, value, gru_hx
+        gru_logits, gru_hx = self.gru(state, gru_hx)
+
+        policy_logits = self.policy_net(gru_logits)
+        value = self.value_net(gru_logits)
+
+        return policy_logits, value, gru_hx
 
 
 def make_env(envname: str) -> gym.Env:
@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="A2C with Box2d")
     parser.add_argument("--envname", type=str, default="LunarLander-v2", help="Name of the environment")
-    parser.add_argument("--nenv", type=int, help="Number of environemnts run in parallel", default=16)
+    parser.add_argument("--nenv", type=int, help="Number of environments run in parallel", default=16)
     parser.add_argument("--seed", type=int, default=None, help="Seed of the experiment")
     parser.add_argument("--lr", type=float, help="Learning rate", default=3e-4)
     parser.add_argument("--device", type=str, help="Torch device", default="cpu")
