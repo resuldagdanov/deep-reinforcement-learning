@@ -83,7 +83,7 @@ class A2C(torch.nn.Module):
             entropies[idx] = entropy.clone()
             hidden_outs[idx] = hidden_out.clone()
         
-        return (actions,  log_probs, values, entropies, hidden_outs)
+        return (actions, log_probs, values, entropies, hidden_outs)
 
     @staticmethod
     def to_torch(array: np.ndarray, device: str) -> torch.Tensor:
@@ -297,12 +297,4 @@ class A2C(torch.nn.Module):
                 float: Average undiscounted episodic reward of <n_episodes> many evaluations
         """
         
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
         raise NotImplementedError

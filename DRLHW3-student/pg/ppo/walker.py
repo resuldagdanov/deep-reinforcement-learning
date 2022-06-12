@@ -22,15 +22,16 @@ class DenseNet(torch.nn.Module):
 
         super().__init__()
 
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        raise NotImplementedError
+        self.policy_net = torch.nn.Sequential(
+            torch.nn.Linear(in_size, hidden),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden, out_size)
+        )
+        self.value_net = torch.nn.Sequential(
+            torch.nn.Linear(in_size, hidden),
+            torch.nn.ReLU(),
+            torch.nn.Linear(hidden, 1)
+        )
 
     def forward(self, state: torch.Tensor) -> Tuple[torch.distributions.Normal, torch.Tensor]:
         """
@@ -42,15 +43,13 @@ class DenseNet(torch.nn.Module):
             Returns:
                 Tuple[torch.distributions.Normal, torch.Tensor]: Normal policy distribution and value
         """
-        #  /$$$$$$$$ /$$$$$$ /$$       /$$
-        # | $$_____/|_  $$_/| $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$$$$     | $$  | $$      | $$
-        # | $$__/     | $$  | $$      | $$
-        # | $$        | $$  | $$      | $$
-        # | $$       /$$$$$$| $$$$$$$$| $$$$$$$$
-        # |__/      |______/|________/|________/
-        raise NotImplementedError
+        
+        policy_logits = self.policy_net(state)
+        policy = torch.distributions.Categorical(policy_logits)
+        
+        value = self.value_net(state)
+
+        return policy, value
 
 
 def make_env(envname: str) -> gym.Env:
